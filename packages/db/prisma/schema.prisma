@@ -1,0 +1,135 @@
+// This is your Prisma schema file
+// Using the new Prisma 7 generator (prisma-client, not prisma-client-js)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated"
+  runtime  = "nodejs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String?   // null for OAuth-only accounts
+  googleId     String?   @unique
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  settings     UserSettings?
+  refreshTokens RefreshToken[]
+  history      RecentSong[]
+  pinnedPlaylists PinnedPlaylist[]
+  downloadJobs DownloadJob[]
+
+  @@index([email])
+}
+
+model UserSettings {
+  id             String       @id @default(cuid())
+  userId         String       @unique
+  defaultFormat  String       @default("mp3")
+  defaultQuality String       @default("high")
+  theme          String       @default("system")
+  updatedAt      DateTime     @updatedAt
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  family    String   // rotation family — reuse detection
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  revokedAt DateTime?
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([family])
+}
+
+// ─── History ─────────────────────────────────────────────────────────────────
+
+model RecentSong {
+  id           String   @id @default(cuid())
+  userId       String
+  videoId      String
+  title        String
+  uploaderName String
+  thumbnailUrl String?
+  duration     Int
+  playedAt     DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+  @@index([userId, playedAt(sort: Desc)])
+}
+
+// ─── Playlists ────────────────────────────────────────────────────────────────
+
+model PinnedPlaylist {
+  id          String   @id @default(cuid())
+  userId      String
+  playlistId  String   // external provider playlist id
+  title       String
+  thumbnailUrl String?
+  videoCount  Int      @default(0)
+  pinnedAt    DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, playlistId])
+  @@index([userId, pinnedAt])
+}
+
+// ─── Downloads ───────────────────────────────────────────────────────────────
+
+model DownloadJob {
+  id          String    @id @default(cuid())
+  userId      String
+  videoId     String
+  title       String
+  format      String    // mp3 | webm | ogg
+  quality     String    // low | medium | high
+  state       String    @default("queued") // queued | resolving | downloading | transcoding | completed | failed | cancelled
+  progress    Int       @default(0)        // 0-100
+  errorCode   String?
+  filePath    String?   // set after completion
+  fileSize    Int?      // bytes
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items       DownloadItem[]
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([state, createdAt])
+}
+
+model DownloadItem {
+  id        String   @id @default(cuid())
+  jobId     String
+  videoId   String
+  title     String
+  state     String   @default("queued")
+  progress  Int      @default(0)
+  filePath  String?
+  errorCode String?
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  job       DownloadJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+}

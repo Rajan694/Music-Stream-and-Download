@@ -1,0 +1,22 @@
+{
+  "name": "@music/config",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./tsconfig/base": "./tsconfig.base.json",
+    "./tsconfig/node": "./tsconfig.node.json",
+    "./tsconfig/nextjs": "./tsconfig.nextjs.json",
+    "./prettier": "./prettier.config.js",
+    "./eslint/base": "./eslint.base.js"
+  },
+  "scripts": {
+    "lint": "echo 'no lint for config package'"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "eslint": "9.39.5",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "8.69.0"
+  }
+}
