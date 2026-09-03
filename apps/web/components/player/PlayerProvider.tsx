@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePlayerStore } from "../../stores/player.store";
+import { usePreferencesStore } from "../../stores/preferences.store";
 import { apiClient } from "../../lib/api";
 import { recordGuestSong } from "../../lib/history";
 
@@ -9,6 +10,7 @@ export function PlayerProvider() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fetchedSuggestionsRef = useRef<string | null>(null);
   const prefetchedStreamRef = useRef<string | null>(null);
+  const streamQuality = usePreferencesStore((s) => s.streamQuality);
 
   const {
     currentTrack,
@@ -124,19 +126,20 @@ export function PlayerProvider() {
     if (repeatMode === "one") return;
 
     const next = queue[queueIndex + 1];
-    if (!next || prefetchedStreamRef.current === next.id) return;
-    prefetchedStreamRef.current = next.id;
+    // Reset if quality changed so we prefetch the correct one.
+    if (prefetchedStreamRef.current === next.id + ":" + streamQuality) return;
+    prefetchedStreamRef.current = next.id + ":" + streamQuality;
 
     // Deliberately not aborted on cleanup: the handler resolves and caches even
     // if the client goes away, so letting an in-flight warm finish is the point.
-    void fetch(`${API_URL}/media/videos/${next.id}/stream?quality=high`, {
+    void fetch(`${API_URL}/media/videos/${next.id}/stream?quality=${streamQuality}`, {
       headers: { Range: "bytes=0-1" },
       cache: "no-store",
     }).catch(() => {
       // A failed warm just means the next track resolves on demand.
       prefetchedStreamRef.current = null;
     });
-  }, [queue, queueIndex, repeatMode, API_URL]);
+  }, [queue, queueIndex, repeatMode, streamQuality, API_URL]);
 
   // Track change
   useEffect(() => {
@@ -148,17 +151,41 @@ export function PlayerProvider() {
       fetchedSuggestionsRef.current = null;
     }
 
+    const targetSrc = `${API_URL}/media/videos/${currentTrack.id}/stream?quality=${streamQuality}`;
+
     if (
       audio.src &&
       audio.src.includes(`/media/videos/${currentTrack.id}/stream`)
-    )
-      return;
+    ) {
+      // Track is the same, but query string might have changed.
+      const currentUrl = new URL(audio.src, window.location.origin);
+      if (currentUrl.searchParams.get("quality") === streamQuality) {
+        return;
+      }
+      
+      // Quality changed mid-track
+      const currentPos = audio.currentTime;
+      const wasPlaying = !audio.paused;
 
-    audio.src = `${API_URL}/media/videos/${currentTrack.id}/stream?quality=high`;
+      audio.src = targetSrc;
+      
+      const onLoadedMetaData = () => {
+        audio.currentTime = currentPos;
+        if (wasPlaying) {
+          audio.play().catch((e) => console.error("Auto-play prevented", e));
+        }
+        audio.removeEventListener('loadedmetadata', onLoadedMetaData);
+      };
+      audio.addEventListener('loadedmetadata', onLoadedMetaData);
+      
+      return;
+    }
+
+    audio.src = targetSrc;
     if (isPlaying) {
       audio.play().catch((e) => console.error("Auto-play prevented", e));
     }
-  }, [currentTrack, API_URL]);
+  }, [currentTrack, streamQuality, API_URL]);
 
   // Play/Pause change
   useEffect(() => {

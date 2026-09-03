@@ -23,6 +23,7 @@ export class SettingsService {
     data: {
       defaultFormat?: string;
       defaultQuality?: string;
+      streamQuality?: string;
       theme?: string;
     },
   ) {

@@ -7,7 +7,6 @@ const TABS = [
   { href: "/profile", label: "Overview" },
   { href: "/profile/history", label: "History" },
   { href: "/profile/playlists", label: "Playlists" },
-  { href: "/profile/settings", label: "Settings" },
 ];
 
 export default function ProfileLayout({

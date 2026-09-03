@@ -6,37 +6,24 @@
     "packages/*"
   ],
   "engines": {
-    "node": ">=22.22.3"
+    "node": ">=20.0.0"
   },
   "packageManager": "npm@11.14.1",
   "scripts": {
-    "dev": "turbo run dev",
-    "build": "turbo run build",
-    "lint": "turbo run lint",
+    "dev": "./scripts/run.sh dev",
+    "build": "./scripts/run.sh build",
+    "lint": "./scripts/run.sh lint",
     "db:generate": "npm run db:generate -w packages/db",
     "db:migrate": "npm run db:migrate -w packages/db",
-    "db:studio": "npm run db:studio -w packages/db",
-    "prepare": "husky"
+    "db:studio": "npm run db:studio -w packages/db"
   },
   "devDependencies": {
-    "husky": "9.1.7",
-    "lint-staged": "16.4.0",
     "prettier": "^3.3.3",
-    "turbo": "2.10.12",
     "typescript": "~6.0.2",
     "eslint": "9.39.5",
     "typescript-eslint": "8.69.0",
     "@eslint/js": "9.39.5",
     "eslint-config-next": "16.3.4",
     "@music/config": "*"
-  },
-  "lint-staged": {
-    "*.{ts,tsx,js,jsx}": [
-      "prettier --write",
-      "eslint --fix"
-    ],
-    "*.{json,md,yaml,yml}": [
-      "prettier --write"
-    ]
   }
 }

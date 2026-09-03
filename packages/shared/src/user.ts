@@ -4,6 +4,7 @@ import { AudioFormat, AudioQuality } from "./media.js";
 export const UserSettingsSchema = z.object({
   defaultFormat: AudioFormat.default("mp3"),
   defaultQuality: AudioQuality.default("high"),
+  streamQuality: AudioQuality.default("high"),
   theme: z.enum(["light", "dark", "system"]).default("system"),
 });
 export type UserSettings = z.infer<typeof UserSettingsSchema>;

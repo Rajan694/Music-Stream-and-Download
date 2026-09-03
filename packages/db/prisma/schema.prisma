@@ -35,6 +35,7 @@ model UserSettings {
   userId         String       @unique
   defaultFormat  String       @default("mp3")
   defaultQuality String       @default("high")
+  streamQuality  String       @default("high")
   theme          String       @default("system")
   updatedAt      DateTime     @updatedAt
 

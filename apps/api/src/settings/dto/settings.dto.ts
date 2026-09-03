@@ -12,6 +12,10 @@ export class UpdateSettingsDto {
   defaultQuality?: AudioQuality;
 
   @IsOptional()
+  @IsIn(['low', 'medium', 'high'])
+  streamQuality?: AudioQuality;
+
+  @IsOptional()
   @IsIn(['light', 'dark', 'system'])
   theme?: 'light' | 'dark' | 'system';
 }

@@ -34,10 +34,19 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                if (localStorage.theme === 'light' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: light)').matches)) {
-                  document.documentElement.classList.remove('dark')
+                let theme;
+                const raw = localStorage.getItem('music-stream:preferences');
+                if (raw) {
+                  try { theme = JSON.parse(raw).theme; } catch (_) {}
+                }
+                if (!theme && localStorage.theme) {
+                  theme = localStorage.theme;
+                }
+                const prefersLight = theme === 'light' || (!theme || theme === 'system') && window.matchMedia('(prefers-color-scheme: light)').matches;
+                if (prefersLight) {
+                  document.documentElement.classList.remove('dark');
                 } else {
-                  document.documentElement.classList.add('dark')
+                  document.documentElement.classList.add('dark');
                 }
               } catch (_) {}
             `,

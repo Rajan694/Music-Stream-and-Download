@@ -12,9 +12,6 @@ dist/
 out/
 *.tsbuildinfo
 
-# Turbo cache
-.turbo/
-
 # Prisma generated
 packages/db/src/generated/
 

@@ -5,6 +5,7 @@ import { MdClose } from "react-icons/md";
 import type { Video } from "@music/shared";
 import { usePlayerStore } from "../../stores/player.store";
 import { useAuthStore } from "../../stores/auth.store";
+import { usePreferencesStore } from "../../stores/preferences.store";
 import { apiClient } from "../../lib/api";
 
 declare global {
@@ -33,8 +34,11 @@ export function DownloadDialog() {
   const [target, setTarget] = useState<Video | null>(null);
   const currentTrack = target ?? playingTrack;
 
-  const [format, setFormat] = useState<"mp3" | "webm" | "ogg">("mp3");
-  const [quality, setQuality] = useState<"low" | "medium" | "high">("high");
+  const defaultFormat = usePreferencesStore((s) => s.defaultFormat);
+  const defaultQuality = usePreferencesStore((s) => s.defaultQuality);
+
+  const [format, setFormat] = useState<"mp3" | "webm" | "ogg">(defaultFormat);
+  const [quality, setQuality] = useState<"low" | "medium" | "high">(defaultQuality);
   const [estimate, setEstimate] = useState<{
     estimatedSize: number | null;
     exact?: boolean;
@@ -148,6 +152,11 @@ export function DownloadDialog() {
     if (!d || d.open) return;
 
     setTarget(track ?? null);
+
+    // Sync latest preferences when opening dialog
+    const prefs = usePreferencesStore.getState();
+    setFormat(prefs.defaultFormat);
+    setQuality(prefs.defaultQuality);
 
     // `<dialog>` emits no "open" event, so the reset and the first estimate
     // have to happen here rather than in a listener.

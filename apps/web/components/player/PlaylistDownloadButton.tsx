@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { apiClient } from "../../lib/api";
+import { usePreferencesStore } from "../../stores/preferences.store";
 import type { PlaylistDownloadEstimate } from "../../lib/api";
 
 const FORMATS = ["mp3", "webm", "ogg"] as const;
@@ -26,9 +27,12 @@ function formatBytes(bytes: number | null): string {
  * run buys nothing over a 2s poll.
  */
 export function PlaylistDownloadButton({ playlistId }: { playlistId: string }) {
+  const defaultFormat = usePreferencesStore((s) => s.defaultFormat);
+  const defaultQuality = usePreferencesStore((s) => s.defaultQuality);
+
   const [open, setOpen] = useState(false);
-  const [format, setFormat] = useState<(typeof FORMATS)[number]>("mp3");
-  const [quality, setQuality] = useState<(typeof QUALITIES)[number]>("high");
+  const [format, setFormat] = useState<(typeof FORMATS)[number]>(defaultFormat);
+  const [quality, setQuality] = useState<(typeof QUALITIES)[number]>(defaultQuality);
 
   // Tagged with the profile it was computed for, so a result for the previous
   // format/quality is recognisably stale instead of needing a synchronous
@@ -136,7 +140,12 @@ export function PlaylistDownloadButton({ playlistId }: { playlistId: string }) {
   if (!open) {
     return (
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          const prefs = usePreferencesStore.getState();
+          setFormat(prefs.defaultFormat);
+          setQuality(prefs.defaultQuality);
+          setOpen(true);
+        }}
         className="px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800"
       >
         Download all

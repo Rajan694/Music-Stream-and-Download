@@ -42,6 +42,7 @@ export interface PinnedPlaylistRecord {
 export interface UserSettings {
   defaultFormat: AudioFormat;
   defaultQuality: AudioQuality;
+  streamQuality: AudioQuality;
   theme: "light" | "dark" | "system";
 }
 
