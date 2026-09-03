@@ -18,18 +18,32 @@ services:
       timeout: 5s
       retries: 5
 
-  # redis:
-  #   image: redis:7-alpine
-  #   restart: unless-stopped
-  #   ports:
-  #     - "6379:6379"
-  #   volumes:
-  #     - redis_data:/data
-  #   healthcheck:
-  #     test: ["CMD", "redis-cli", "ping"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Metadata cache only — every key carries a TTL and nothing here is a source
+    # of truth, so evicting under pressure is correct rather than data loss.
+    command:
+      [
+        "redis-server",
+        "--maxmemory",
+        "256mb",
+        "--maxmemory-policy",
+        "allkeys-lru",
+        "--save",
+        "",
+      ]
+    ports:
+      # Host port offset like postgres, so a Redis already running on the
+      # default port is not shadowed by this one.
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # ── Production services (activate with: docker compose --profile prod up) ────
 
@@ -53,16 +67,20 @@ services:
       GOOGLE_CALLBACK_URL: "${GOOGLE_CALLBACK_URL:-http://localhost:4000/api/v1/auth/google/callback}"
       FRONTEND_URL: "${FRONTEND_URL:-http://localhost:3000}"
       CORS_ORIGINS: "${CORS_ORIGINS:-http://localhost:3000}"
-      PIPED_API_URL: "${PIPED_API_URL:-https://pipedapi.kavin.rocks}"
+      PIPED_API_URL: "${PIPED_API_URL:-https://api.piped.private.coffee}"
       PIPED_FALLBACK_URLS: "${PIPED_FALLBACK_URLS}"
+      REDIS_URL: redis://redis:6379
       MEDIA_TEMP_DIR: /tmp/music-media
       MAX_DOWNLOAD_SIZE: "${MAX_DOWNLOAD_SIZE:-52428800}"
       MAX_DOWNLOAD_DURATION: "${MAX_DOWNLOAD_DURATION:-1800}"
+      MAX_PLAYLIST_ITEMS: "${MAX_PLAYLIST_ITEMS:-50}"
       DOWNLOAD_TOKEN_SECRET: "${DOWNLOAD_TOKEN_SECRET}"
     ports:
       - "4000:4000"
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test:
@@ -81,7 +99,7 @@ services:
     environment:
       NODE_ENV: production
       WORKER_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/music?schema=public
-      WORKER_PIPED_API_URL: "${PIPED_API_URL:-https://pipedapi.kavin.rocks}"
+      WORKER_PIPED_API_URL: "${PIPED_API_URL:-https://api.piped.private.coffee}"
       WORKER_MEDIA_TEMP_DIR: /tmp/music-media
       FFMPEG_PATH: /usr/bin/ffmpeg
       YT_DLP_PATH: /usr/bin/yt-dlp
@@ -124,5 +142,5 @@ services:
 
 volumes:
   postgres_data:
-  # redis_data:
+  redis_data:
   worker_tmp:

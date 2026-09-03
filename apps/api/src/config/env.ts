@@ -70,7 +70,10 @@ const EnvSchema = z.object({
   API_PORT: z.coerce.number().int().positive().default(4000),
   CORS_ORIGINS: z.string().default('http://localhost:3000'),
 
-  PIPED_API_URL: z.url().default('https://pipedapi.kavin.rocks'),
+  // Public Piped instances churn constantly — treat this default as a starting
+  // point to re-probe, not a guarantee. yt-dlp backs every operation except
+  // suggestions, which is why the chain keeps working when Piped does not.
+  PIPED_API_URL: z.url().default('https://api.piped.private.coffee'),
   PIPED_FALLBACK_URLS: z.string().default(''),
 
   PROVIDER_TIMEOUT_MS: z.coerce.number().int().positive().default(8000),
@@ -79,6 +82,11 @@ const EnvSchema = z.object({
 
   YT_DLP_PATH: z.string().default(vendoredYtDlpPath()),
   YT_DLP_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+
+  // Unset means the in-process LRU. Setting it moves the metadata cache to
+  // Redis, which is what makes a restart stop costing a fresh yt-dlp spawn per
+  // track.
+  REDIS_URL: z.url().optional(),
 
   CACHE_SEARCH_TTL_MS: z.coerce
     .number()

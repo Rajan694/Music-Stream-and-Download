@@ -121,7 +121,7 @@ export class StreamService {
     if (!upstream.ok && upstream.status !== 206) {
       // A cached URL that has since expired is the common cause; drop it so the
       // next attempt resolves a fresh one.
-      this.cache.delete(`stream:${videoId}:${quality}`);
+      await this.cache.delete(`stream:${videoId}:${quality}`);
       await upstream.body?.cancel();
       throw new ProviderException(
         ErrorCode.STREAM_ERROR,

@@ -96,7 +96,10 @@ model PinnedPlaylist {
 model DownloadJob {
   id          String    @id @default(cuid())
   userId      String
-  videoId     String
+  kind        String    @default("video")  // video | playlist
+  // Null on a playlist job: the tracks live in `items`, one row each.
+  videoId     String?
+  playlistId  String?   // external provider playlist id, set when kind=playlist
   title       String
   format      String    // mp3 | webm | ogg
   quality     String    // low | medium | high
@@ -124,6 +127,7 @@ model DownloadItem {
   state     String   @default("queued")
   progress  Int      @default(0)
   filePath  String?
+  fileSize  Int?     // bytes, set on completion
   errorCode String?
   position  Int      @default(0)
   createdAt DateTime @default(now())

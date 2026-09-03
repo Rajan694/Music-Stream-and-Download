@@ -1,9 +1,13 @@
 import { Controller, Get } from '@nestjs/common';
 import { PrismaClient } from '@music/db';
+import { CacheStore } from '../common/cache/cache.store.js';
 
 @Controller('health')
 export class HealthController {
-  constructor(private prisma: PrismaClient) {}
+  constructor(
+    private prisma: PrismaClient,
+    private cache: CacheStore,
+  ) {}
 
   @Get()
   async check() {
@@ -17,6 +21,10 @@ export class HealthController {
       checks.postgres = 'unavailable';
     }
 
+    // Metadata cache. Reported separately from its backend name so a silent
+    // fallback to the in-process store is visible rather than looking healthy.
+    checks.cache = (await this.cache.healthy()) ? 'ok' : 'unavailable';
+
     const status = Object.values(checks).every((s) => s === 'ok')
       ? 'ok'
       : 'degraded';
@@ -25,6 +33,7 @@ export class HealthController {
       status,
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
+      cacheBackend: this.cache.backend,
       checks,
     };
   }

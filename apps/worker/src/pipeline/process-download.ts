@@ -12,9 +12,9 @@ export interface DownloadResult {
   fileSize: number;
 }
 
-/** Ensure per-job isolated temp directory and return its path. */
-async function ensureJobDir(jobId: string, baseDir: string): Promise<string> {
-  const dir = join(baseDir, jobId);
+/** Ensure an isolated temp directory for this unit of work and return its path. */
+async function ensureJobDir(dirKey: string, baseDir: string): Promise<string> {
+  const dir = join(baseDir, dirKey);
   await mkdir(dir, { recursive: true });
   return dir;
 }
@@ -170,6 +170,14 @@ export async function processDownload(
     title: string;
     format: string;
     quality: string;
+    /**
+     * Temp sub-path, relative to the media base dir. Defaults to the job id.
+     * Playlist tracks pass `<jobId>/<itemId>` so their output nests under the
+     * parent: the orphan sweeper keys top-level directories by job id, and a
+     * track written to its own top-level folder would look orphaned and be
+     * deleted an hour later while the parent job still advertised it.
+     */
+    dirKey?: string;
   },
   onProgress: (percent: number) => Promise<void> | void,
 ): Promise<DownloadResult> {
@@ -180,7 +188,7 @@ export async function processDownload(
     process.env.MEDIA_TEMP_DIR ||
     process.env.WORKER_MEDIA_TEMP_DIR ||
     "/tmp/music-media";
-  const jobDir = await ensureJobDir(job.id, baseDir);
+  const jobDir = await ensureJobDir(job.dirKey ?? job.id, baseDir);
 
   // Kill handles for the process tree on timeout / size overrun.
   const trackers = new Set<{

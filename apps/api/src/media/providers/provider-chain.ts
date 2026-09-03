@@ -160,11 +160,43 @@ export class ProviderChain implements MediaProvider {
   }
 
   getVideo(id: string): Promise<Video> {
-    return this.run('getVideo', (provider) => provider.getVideo(id));
+    return this.run('getVideo', async (provider) => {
+      const video = await provider.getVideo(id);
+
+      // An audio product cannot use a video with no audio. A provider that has
+      // lost audio extraction still answers 200 with full metadata and an empty
+      // `audioStreams`, which would otherwise count as success: the result gets
+      // cached for a full TTL, the circuit never opens, and playback stays
+      // broken while a working provider sits unused behind it.
+      if (!video.audioStreams.length) {
+        throw new ProviderException(
+          ErrorCode.PROVIDER_ERROR,
+          `${provider.name} returned no audio streams for ${id}`,
+        );
+      }
+
+      return video;
+    });
   }
 
   getPlaylist(id: string): Promise<Playlist> {
-    return this.run('getPlaylist', (provider) => provider.getPlaylist(id));
+    return this.run('getPlaylist', async (provider) => {
+      const playlist = await provider.getPlaylist(id);
+
+      // Same shape of lie as an audio-less video: the provider reports a track
+      // count but hands back no tracks. A genuinely empty playlist has
+      // `videoCount` 0 too, so only the contradiction is treated as a fault —
+      // otherwise an empty result caches for an hour and every consumer, the
+      // playlist page and playlist downloads alike, sees nothing to work with.
+      if (playlist.videoCount > 0 && playlist.videos.length === 0) {
+        throw new ProviderException(
+          ErrorCode.PROVIDER_ERROR,
+          `${provider.name} returned no tracks for playlist ${id} despite a count of ${playlist.videoCount}`,
+        );
+      }
+
+      return playlist;
+    });
   }
 
   getSuggestions(videoId: string): Promise<VideoSummary[]> {

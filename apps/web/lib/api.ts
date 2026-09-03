@@ -55,16 +55,97 @@ export interface DownloadEstimate {
   sizeRange?: { min: number; max: number };
 }
 
+export interface PlaylistDownloadEstimate {
+  playlistId: string;
+  title: string;
+  uploaderName: string;
+  /** Tracks in the playlist. */
+  totalCount: number;
+  /** Tracks that will actually be queued. */
+  itemCount: number;
+  /** Dropped for being too long, or having no duration at all (live). */
+  skippedCount: number;
+  /** Eligible but past the per-request cap. */
+  overCapCount: number;
+  maxItems: number;
+  totalDuration: number;
+  estimatedSize: number | null;
+  exact: boolean;
+  sizeRange?: { min: number; max: number };
+}
+
+export interface DownloadItemRecord {
+  id: string;
+  videoId: string;
+  title: string;
+  state: string;
+  progress: number;
+  errorCode: string | null;
+  position: number;
+}
+
+export interface DownloadJobRecord {
+  id: string;
+  kind: "video" | "playlist";
+  videoId: string | null;
+  playlistId: string | null;
+  title: string;
+  format: string;
+  quality: string;
+  state: string;
+  progress: number;
+  errorCode: string | null;
+  fileSize: number | null;
+  createdAt: string;
+  items: DownloadItemRecord[];
+}
+
+interface FetchOptions<T> {
+  schema?: z.ZodType<T>;
+  method?: string;
+  body?: unknown;
+  authed?: boolean;
+  /** Send the refresh cookie — only the session routes need it. */
+  credentials?: boolean;
+  /**
+   * Internal. Cleared on the retry so a refresh that itself 401s cannot loop,
+   * and set false on `/auth/refresh` so it never tries to refresh itself.
+   */
+  retryOnUnauthorized?: boolean;
+}
+
+/**
+ * Single-flight refresh. The access token lives in memory with a 15 minute TTL
+ * while the page can stay open far longer, so any authed call may find it
+ * expired. Refresh tokens rotate and reuse revokes the whole family, meaning
+ * two concurrent 401s must share one exchange rather than redeem the cookie
+ * twice.
+ */
+let refreshInFlight: Promise<string> | null = null;
+
+function refreshAccessToken(): Promise<string> {
+  refreshInFlight ??= (async () => {
+    try {
+      const { accessToken } = await fetchApi<{ accessToken: string }>(
+        "/auth/refresh",
+        { method: "POST", credentials: true, retryOnUnauthorized: false },
+      );
+      // Keep the user object: only the token went stale.
+      useAuthStore
+        .getState()
+        .setAuth(useAuthStore.getState().user, accessToken);
+      return accessToken;
+    } finally {
+      refreshInFlight = null;
+    }
+  })();
+
+  return refreshInFlight;
+}
+
 async function fetchApi<T>(
   endpoint: string,
-  opts: {
-    schema?: z.ZodType<T>;
-    method?: string;
-    body?: unknown;
-    authed?: boolean;
-    /** Send the refresh cookie — only the session routes need it. */
-    credentials?: boolean;
-  } = {},
+  opts: FetchOptions<T> = {},
 ): Promise<T> {
   const {
     schema,
@@ -72,6 +153,7 @@ async function fetchApi<T>(
     body,
     authed = false,
     credentials = false,
+    retryOnUnauthorized = true,
   } = opts;
 
   const headers = new Headers({ "Content-Type": "application/json" });
@@ -87,6 +169,18 @@ async function fetchApi<T>(
     cache: "no-store",
     credentials: credentials ? "include" : "same-origin",
   });
+
+  // An expired access token is the common case here, not a real sign-out, so
+  // exchange the refresh cookie and replay the request once.
+  if (response.status === 401 && authed && retryOnUnauthorized) {
+    try {
+      await refreshAccessToken();
+    } catch {
+      useAuthStore.getState().logout();
+      throw new Error("Your session has expired. Please sign in again.");
+    }
+    return fetchApi<T>(endpoint, { ...opts, retryOnUnauthorized: false });
+  }
 
   if (!response.ok) {
     let errorDesc = `API Error: ${response.status} ${response.statusText}`;
@@ -125,11 +219,9 @@ export const apiClient = {
    * of the Google flow: the callback sets the cookie, then the browser lands on
    * `/auth/callback` and calls this.
    */
-  refresh: () =>
-    fetchApi<{ accessToken: string }>("/auth/refresh", {
-      method: "POST",
-      credentials: true,
-    }),
+  // Shares the single-flight exchange with the 401 retry path: a bootstrap that
+  // overlaps an expiring request must not redeem the rotating cookie twice.
+  refresh: async () => ({ accessToken: await refreshAccessToken() }),
   me: () =>
     fetchApi<{ id: string; email: string }>("/auth/me", { authed: true }),
   logout: () =>
@@ -210,12 +302,7 @@ export const apiClient = {
       body: { videoId, format, quality },
     }),
   getDownload: (id: string) =>
-    fetchApi<{
-      id: string;
-      state: string;
-      progress: number;
-      errorCode: string | null;
-    }>(`/downloads/${id}`, { authed: true }),
+    fetchApi<DownloadJobRecord>(`/downloads/${id}`, { authed: true }),
   listDownloads: () =>
     fetchApi<
       Array<{
@@ -230,9 +317,36 @@ export const apiClient = {
         createdAt: string;
       }>
     >("/downloads", { authed: true }),
+  // ─── Playlist downloads ────────────────────────────────────────────────────
+  estimatePlaylistDownload: (
+    playlistId: string,
+    format: string,
+    quality: string,
+  ) =>
+    fetchApi<PlaylistDownloadEstimate>("/downloads/playlist/estimate", {
+      method: "POST",
+      authed: true,
+      body: { playlistId, format, quality },
+    }),
+  createPlaylistDownload: (
+    playlistId: string,
+    format: string,
+    quality: string,
+  ) =>
+    fetchApi<DownloadJobRecord>("/downloads/playlist", {
+      method: "POST",
+      authed: true,
+      body: { playlistId, format, quality },
+    }),
+
   /** Absolute URL for the finished file; the token rides in the query string. */
   downloadFileUrl: (id: string) => {
     const token = useAuthStore.getState().accessToken;
     return `${API_BASE_URL}/downloads/${id}/file?token=${encodeURIComponent(token ?? "")}`;
+  },
+  /** Zip of every completed track in a playlist job. */
+  playlistArchiveUrl: (id: string) => {
+    const token = useAuthStore.getState().accessToken;
+    return `${API_BASE_URL}/downloads/${id}/archive?token=${encodeURIComponent(token ?? "")}`;
   },
 };

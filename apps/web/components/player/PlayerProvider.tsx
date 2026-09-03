@@ -8,6 +8,7 @@ import { recordGuestSong } from "../../lib/history";
 export function PlayerProvider() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fetchedSuggestionsRef = useRef<string | null>(null);
+  const prefetchedStreamRef = useRef<string | null>(null);
 
   const {
     currentTrack,
@@ -109,6 +110,33 @@ export function PlayerProvider() {
     repeatMode,
     addToQueue,
   ]);
+
+  // Warm the next track's stream URL as soon as the current one starts, so
+  // advancing the queue does not pay the provider round trip (seconds, since a
+  // cold resolve spawns yt-dlp).
+  //
+  // This has to go through the stream route: `resolveStreamUrl` keys on
+  // `stream:<id>:<quality>` and asks the provider chain directly, so warming
+  // `video:<id>` with `getVideo` would leave the streaming path just as cold.
+  // A two-byte range is enough — the server resolves and caches before it
+  // relays anything.
+  useEffect(() => {
+    if (repeatMode === "one") return;
+
+    const next = queue[queueIndex + 1];
+    if (!next || prefetchedStreamRef.current === next.id) return;
+    prefetchedStreamRef.current = next.id;
+
+    // Deliberately not aborted on cleanup: the handler resolves and caches even
+    // if the client goes away, so letting an in-flight warm finish is the point.
+    void fetch(`${API_URL}/media/videos/${next.id}/stream?quality=high`, {
+      headers: { Range: "bytes=0-1" },
+      cache: "no-store",
+    }).catch(() => {
+      // A failed warm just means the next track resolves on demand.
+      prefetchedStreamRef.current = null;
+    });
+  }, [queue, queueIndex, repeatMode, API_URL]);
 
   // Track change
   useEffect(() => {

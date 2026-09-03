@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import { Injectable, Logger } from '@nestjs/common';
+import { z } from 'zod';
 import {
   ErrorCode,
   Playlist,
@@ -9,6 +10,7 @@ import {
   Video,
   VideoSchema,
   VideoSummary,
+  VideoSummarySchema,
 } from '@music/shared';
 import { MediaProvider } from './media-provider.interface.js';
 import { ProviderException } from '../../common/errors/provider.exception.js';
@@ -19,6 +21,9 @@ type YtDlpPayload = Record<string, any>;
 
 /** Guard against a hostile or pathological dump exhausting memory. */
 const MAX_OUTPUT_BYTES = 32 * 1024 * 1024;
+
+/** Matches the length of a Piped `relatedVideos` list. */
+const SUGGESTIONS_LIMIT = 20;
 
 @Injectable()
 export class YtDlpProvider implements MediaProvider {
@@ -177,18 +182,8 @@ export class YtDlpProvider implements MediaProvider {
             contentLength: f.filesize ?? f.filesize_approx ?? undefined,
             codec: f.acodec,
           })),
-        videoStreams: formats
-          .filter((f) => f.vcodec && f.vcodec !== 'none' && f.url)
-          .map((f) => ({
-            url: f.url,
-            mimeType: f.ext === 'mp4' ? 'video/mp4' : 'video/webm',
-            quality: f.format_note ?? (f.height ? `${f.height}p` : 'unknown'),
-            width: f.width ?? undefined,
-            height: f.height ?? undefined,
-            contentLength: f.filesize ?? f.filesize_approx ?? undefined,
-            fps: f.fps ?? undefined,
-          })),
-        // yt-dlp does not expose related videos; suggestions come from Piped.
+        // The video dump carries no related list; `getSuggestions` fetches
+        // them separately from the mix playlist.
         relatedVideos: [],
       },
       'ytdlp.getVideo',
@@ -247,15 +242,28 @@ export class YtDlpProvider implements MediaProvider {
     );
   }
 
-  getSuggestions(): Promise<VideoSummary[]> {
-    // Declared unsupported rather than returning an empty list: an empty array
-    // would look like a successful lookup and hide that the primary provider
-    // is down.
-    return Promise.reject(
-      new ProviderException(
-        ErrorCode.UNSUPPORTED_OPERATION,
-        'yt-dlp does not provide suggestions',
-      ),
-    );
+  /**
+   * yt-dlp exposes no `relatedVideos` field, so suggestions come from the
+   * auto-generated "Mix" radio playlist (`RD<videoId>`) — YouTube's own
+   * related-track feed for a video. Without this the chain has no fallback for
+   * suggestions and answers 503 whenever Piped is down.
+   */
+  async getSuggestions(videoId: string): Promise<VideoSummary[]> {
+    const data = await this.execute([
+      '-J',
+      '--flat-playlist',
+      // The seed video is entry one, so fetch one extra to still return a full
+      // page after dropping it.
+      '--playlist-end',
+      String(SUGGESTIONS_LIMIT + 1),
+      `https://www.youtube.com/watch?v=${videoId}&list=RD${videoId}`,
+    ]);
+
+    const items = (data.entries ?? [])
+      .map((entry: YtDlpPayload) => this.toSummary(entry))
+      .filter((item: VideoSummary) => item.id !== '' && item.id !== videoId)
+      .slice(0, SUGGESTIONS_LIMIT);
+
+    return parseDto(z.array(VideoSummarySchema), items, 'ytdlp.getSuggestions');
   }
 }

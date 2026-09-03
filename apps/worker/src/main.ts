@@ -3,6 +3,7 @@ import { readdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { createPrismaClient } from "@music/db";
 import { PostgresJobQueue } from "./queue/job-queue.js";
+import type { ClaimedJob, JobQueue } from "./queue/job-queue.js";
 import { processDownload, QueueError } from "./pipeline/process-download.js";
 
 const POLL_INTERVAL_MS = Number(process.env.JOB_POLL_INTERVAL_MS ?? 2000);
@@ -65,6 +66,13 @@ async function cleanupOrphanTempFiles(prisma: Prisma): Promise<void> {
         where: { id: entry, filePath: { not: null } },
         data: { filePath: null },
       });
+
+      // Playlist tracks live inside the parent's directory, so the same sweep
+      // took their bytes too.
+      await prisma.downloadItem.updateMany({
+        where: { jobId: entry, filePath: { not: null } },
+        data: { filePath: null },
+      });
     } catch {
       // best-effort
     }
@@ -73,6 +81,71 @@ async function cleanupOrphanTempFiles(prisma: Prisma): Promise<void> {
   if (cleaned > 0) {
     console.info(`Cleaned ${cleaned} orphaned temp dir(s)`);
   }
+}
+
+/**
+ * Runs every track of a playlist job in order.
+ *
+ * Sequential on purpose: `WORKER_CONCURRENCY` governs how many *jobs* run at
+ * once, and fanning a fifty-track playlist out in parallel would let one
+ * request monopolise the box and every other user's download behind it.
+ *
+ * A failed track is recorded on its own row and the run continues — one dead
+ * video must not cost the other forty-nine.
+ */
+async function processPlaylistJob(
+  job: ClaimedJob,
+  queue: JobQueue,
+): Promise<void> {
+  const total = job.items.length;
+  let completed = 0;
+  let totalBytes = 0;
+
+  await queue.setState(job.id, "downloading");
+
+  for (const item of job.items) {
+    try {
+      await queue.setItemProgress(item.id, 0, "resolving");
+
+      const result = await processDownload(
+        {
+          id: job.id,
+          dirKey: join(job.id, item.id),
+          videoId: item.videoId,
+          title: item.title,
+          format: job.format,
+          quality: job.quality,
+        },
+        async (percent) => {
+          await queue.setItemProgress(
+            item.id,
+            Math.round(percent),
+            percent >= 100 ? "completed" : "transcoding",
+          );
+          // Whole tracks finished plus the fraction of the current one, so the
+          // parent bar still moves during a long track.
+          const overall = ((completed + percent / 100) / total) * 100;
+          await queue.setProgress(job.id, Math.round(overall), "downloading");
+        },
+      );
+
+      await queue.completeItem(item.id, result.filePath, result.fileSize);
+      completed++;
+      totalBytes += result.fileSize;
+    } catch (err) {
+      const code = err instanceof QueueError ? err.code : "DOWNLOAD_FAILED";
+      console.error(
+        `Playlist ${job.id} track ${item.videoId} failed:`,
+        err instanceof Error ? err.message : err,
+      );
+      await queue.failItem(item.id, code);
+    }
+  }
+
+  await queue.completePlaylist(job.id, totalBytes, completed > 0);
+  console.info(
+    `Playlist job ${job.id}: ${completed}/${total} track(s) completed`,
+  );
 }
 
 async function main(): Promise<void> {
@@ -105,12 +178,34 @@ async function main(): Promise<void> {
     }
     if (!job) return;
 
+    if (job.kind === "playlist") {
+      console.info(
+        `Processing playlist job ${job.id} (${job.items.length} tracks, ${job.format}/${job.quality})`,
+      );
+      try {
+        await processPlaylistJob(job, queue);
+      } catch (err) {
+        console.error(`Playlist job ${job.id} failed:`, err);
+        await queue.fail(job.id, "DOWNLOAD_FAILED");
+      }
+      return;
+    }
+
+    if (!job.videoId) {
+      // A non-playlist job with no video is unprocessable rather than
+      // retryable; fail it instead of re-claiming it on every poll.
+      console.error(`Job ${job.id} has no videoId — failing`);
+      await queue.fail(job.id, "DOWNLOAD_FAILED");
+      return;
+    }
+    const videoId = job.videoId;
+
     console.info(
-      `Processing job ${job.id} (${job.videoId}, ${job.format}/${job.quality})`,
+      `Processing job ${job.id} (${videoId}, ${job.format}/${job.quality})`,
     );
 
     try {
-      await processDownload(job, async (percent) => {
+      await processDownload({ ...job, videoId }, async (percent) => {
         const state =
           percent < 5
             ? "resolving"

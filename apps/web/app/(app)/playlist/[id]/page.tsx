@@ -12,6 +12,7 @@ import {
   ErrorState,
   Spinner,
 } from "../../../../components/ui/States";
+import { PlaylistDownloadButton } from "../../../../components/player/PlaylistDownloadButton";
 
 export default function PlaylistPage({
   params,
@@ -134,6 +135,10 @@ export default function PlaylistPage({
               >
                 {isPinned ? "Unpin" : "Pin to home"}
               </button>
+            )}
+            {/* Downloads are per-user work, so this needs a signed-in account. */}
+            {isAuthenticated && playlist.videos.length > 0 && (
+              <PlaylistDownloadButton playlistId={id} />
             )}
           </div>
 

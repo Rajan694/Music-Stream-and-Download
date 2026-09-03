@@ -139,16 +139,6 @@ export class PipedProvider implements MediaProvider {
             stream.contentLength > 0 ? stream.contentLength : undefined,
           codec: stream.codec,
         })),
-        videoStreams: (data.videoStreams ?? []).map((stream: PipedPayload) => ({
-          url: stream.url,
-          mimeType: stream.mimeType,
-          quality: stream.quality,
-          width: stream.width,
-          height: stream.height,
-          contentLength:
-            stream.contentLength > 0 ? stream.contentLength : undefined,
-          fps: stream.fps,
-        })),
         relatedVideos: (data.relatedStreams ?? [])
           .filter(
             (item: PipedPayload) =>

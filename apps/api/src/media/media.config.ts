@@ -49,4 +49,9 @@ export class MediaConfig {
   get cacheMaxEntries(): number {
     return this.env.CACHE_MAX_ENTRIES;
   }
+
+  /** Undefined selects the in-process cache backend. */
+  get redisUrl(): string | undefined {
+    return this.env.REDIS_URL;
+  }
 }

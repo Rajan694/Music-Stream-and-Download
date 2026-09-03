@@ -8,9 +8,45 @@ import { ApiError, ErrorCode } from '@music/shared';
 import { AppModule } from './app.module.js';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter.js';
 import { ThrottleGuard } from './common/guards/throttle.guard.js';
-import { loadEnv } from './config/env.js';
+import { loadEnv, type Env } from './config/env.js';
 
 const API_PREFIX = 'api/v1';
+
+function isLoopbackOrigin(origin: string): boolean {
+  try {
+    const { hostname, protocol } = new URL(origin);
+    return (
+      ['http:', 'https:'].includes(protocol) &&
+      ['localhost', '127.0.0.1', '::1', '[::1]'].includes(
+        hostname.toLowerCase(),
+      )
+    );
+  } catch {
+    return false;
+  }
+}
+
+function corsOrigin(
+  env: Env,
+): (
+  origin: string | undefined,
+  callback: (err: Error | null, allow?: boolean) => void,
+) => void {
+  const allowedOrigins = new Set(env.corsOrigins);
+  const allowLoopbackOrigins = env.NODE_ENV !== 'production';
+
+  return (origin, callback) => {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    const allowed =
+      allowedOrigins.has(origin) ||
+      (allowLoopbackOrigins && isLoopbackOrigin(origin));
+    callback(null, allowed);
+  };
+}
 
 async function bootstrap(): Promise<void> {
   // Validated up front so a bad value fails at boot, not mid-request.
@@ -50,7 +86,7 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
-  app.enableCors({ origin: env.corsOrigins, credentials: true });
+  app.enableCors({ origin: corsOrigin(env), credentials: true });
   app.enableShutdownHooks();
 
   // Routes are mounted during init, so a handler registered afterwards runs

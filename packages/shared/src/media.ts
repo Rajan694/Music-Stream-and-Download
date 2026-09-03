@@ -27,21 +27,10 @@ export const AudioStreamSchema = z.object({
 });
 export type AudioStream = z.infer<typeof AudioStreamSchema>;
 
-export const VideoStreamSchema = z.object({
-  url: z.url(),
-  mimeType: z.string(),
-  /**
-   * Free-form provider label ("1080p", "1080p60", "medium"). Deliberately not an
-   * enum: providers disagree on the vocabulary and a strict enum would reject
-   * otherwise-valid payloads. Normalize at the point of use.
-   */
-  quality: z.string(),
-  width: z.number().int().positive().optional(),
-  height: z.number().int().positive().optional(),
-  contentLength: z.number().positive().optional(),
-  fps: z.number().positive().optional(),
-});
-export type VideoStream = z.infer<typeof VideoStreamSchema>;
+// This is an audio product: video streams are deliberately not modelled.
+// Carrying them meant every provider mapped, validated, cached and shipped
+// ~37 muxed formats per track — 77% of the video payload — that no caller ever
+// read. Playback and downloads both resolve from `audioStreams`.
 
 // ─── Video ────────────────────────────────────────────────────────────────────
 
@@ -63,7 +52,6 @@ export const VideoSchema = VideoSummarySchema.extend({
   description: z.string().optional(),
   likeCount: z.number().int().nonnegative().optional(),
   audioStreams: z.array(AudioStreamSchema).default([]),
-  videoStreams: z.array(VideoStreamSchema).default([]),
   relatedVideos: z.array(VideoSummarySchema).default([]),
 });
 export type Video = z.infer<typeof VideoSchema>;

@@ -23,6 +23,37 @@ export class CreateDownloadDto {
   quality!: AudioQuality;
 }
 
+/** Mirrors `SourceUrlParser`'s playlist rule so both reject the same ids. */
+export class CreatePlaylistDownloadDto {
+  @IsString()
+  @Matches(/^[A-Za-z0-9_-]{2,64}$/, {
+    message: 'playlistId must be a valid playlist id',
+  })
+  playlistId!: string;
+
+  @IsIn(FORMATS)
+  format!: AudioFormat;
+
+  @IsIn(QUALITIES)
+  quality!: AudioQuality;
+}
+
+export class EstimatePlaylistDownloadDto {
+  @IsString()
+  @Matches(/^[A-Za-z0-9_-]{2,64}$/, {
+    message: 'playlistId must be a valid playlist id',
+  })
+  playlistId!: string;
+
+  @IsOptional()
+  @IsIn(FORMATS)
+  format?: AudioFormat;
+
+  @IsOptional()
+  @IsIn(QUALITIES)
+  quality?: AudioQuality;
+}
+
 export class EstimateDownloadDto {
   @IsString()
   @Matches(/^[A-Za-z0-9_-]{11}$/, {
