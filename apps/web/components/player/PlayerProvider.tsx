@@ -126,6 +126,7 @@ export function PlayerProvider() {
     if (repeatMode === "one") return;
 
     const next = queue[queueIndex + 1];
+    if (!next) return;
     // Reset if quality changed so we prefetch the correct one.
     if (prefetchedStreamRef.current === next.id + ":" + streamQuality) return;
     prefetchedStreamRef.current = next.id + ":" + streamQuality;

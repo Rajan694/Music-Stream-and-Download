@@ -29,19 +29,18 @@ const TERMINAL_STATES = new Set(['completed', 'failed', 'cancelled']);
 const SSE_POLL_MS = 1500;
 
 @Controller('downloads')
-@UseGuards(JwtAuthGuard)
 export class DownloadsController {
   private readonly logger = new Logger(DownloadsController.name);
 
   constructor(private readonly downloads: DownloadsService) {}
 
-  /** Estimated output size for a format/quality pair (§22, D6). */
+  /** Estimated output size for a format/quality pair (§22, D6). Public — no user needed. */
   @Post('estimate')
   estimate(@Body() dto: EstimateDownloadDto) {
     return this.downloads.estimate(dto.videoId, dto.format, dto.quality);
   }
 
-  /** Whole-playlist estimate, costing one provider call rather than one per track. */
+  /** Whole-playlist estimate, costing one provider call rather than one per track. Public. */
   @Post('playlist/estimate')
   estimatePlaylist(@Body() dto: EstimatePlaylistDownloadDto) {
     return this.downloads.estimatePlaylist(
@@ -53,6 +52,7 @@ export class DownloadsController {
 
   /** Queues a playlist as one parent job with a `DownloadItem` per track. */
   @Post('playlist')
+  @UseGuards(JwtAuthGuard)
   createPlaylist(
     @CurrentUser() user: Express.User,
     @Body() dto: CreatePlaylistDownloadDto,
@@ -66,16 +66,19 @@ export class DownloadsController {
   }
 
   @Post()
+  @UseGuards(JwtAuthGuard)
   create(@CurrentUser() user: Express.User, @Body() dto: CreateDownloadDto) {
     return this.downloads.create(user.id, dto.videoId, dto.format, dto.quality);
   }
 
   @Get()
+  @UseGuards(JwtAuthGuard)
   async list(@CurrentUser() user: Express.User) {
     return this.downloads.list(user.id);
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
   get(@CurrentUser() user: Express.User, @Param('id') id: string) {
     return this.downloads.get(user.id, id);
   }
@@ -85,6 +88,7 @@ export class DownloadsController {
    * and closes as soon as a terminal state appears.
    */
   @Sse(':id/events')
+  @UseGuards(JwtAuthGuard)
   events(
     @CurrentUser() user: Express.User,
     @Param('id') id: string,
@@ -129,6 +133,7 @@ export class DownloadsController {
 
   /** Serves the finished file (D3). Ownership and existence checked upstream. */
   @Get(':id/file')
+  @UseGuards(JwtAuthGuard)
   async getFile(
     @CurrentUser() user: Express.User,
     @Param('id') id: string,
@@ -141,6 +146,7 @@ export class DownloadsController {
 
   /** Serves one track out of a playlist job, for retrying or cherry-picking. */
   @Get(':id/items/:itemId/file')
+  @UseGuards(JwtAuthGuard)
   async getItemFile(
     @CurrentUser() user: Express.User,
     @Param('id') id: string,
@@ -161,6 +167,7 @@ export class DownloadsController {
    * two identical names in one archive is a corrupt-looking download.
    */
   @Get(':id/archive')
+  @UseGuards(JwtAuthGuard)
   async getArchive(
     @CurrentUser() user: Express.User,
     @Param('id') id: string,
