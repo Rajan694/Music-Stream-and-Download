@@ -31,7 +31,7 @@ export class DownloadsService {
   }
 
   async estimate(videoId: string, format?: AudioFormat, quality?: AudioQuality) {
-    const video = await this.providers.getVideo(videoId).catch(() => null);
+    const video = await this.safeGetVideo(videoId);
     if (!video) throw new HttpError(404, ErrorCode.NOT_FOUND, 'Video not found');
 
     const targetFormat = format ?? 'mp3';
@@ -58,7 +58,7 @@ export class DownloadsService {
   }
 
   async create(userId: string, videoId: string, format: AudioFormat, quality: AudioQuality) {
-    const video = await this.providers.getVideo(videoId).catch(() => null);
+    const video = await this.safeGetVideo(videoId);
     if (!video) throw new HttpError(404, ErrorCode.NOT_FOUND, 'Video not found');
 
     const maxDuration = this.env.MAX_DOWNLOAD_DURATION;
@@ -94,7 +94,7 @@ export class DownloadsService {
   }
 
   async estimatePlaylist(playlistId: string, format?: AudioFormat, quality?: AudioQuality) {
-    const playlist = await this.providers.getPlaylist(playlistId).catch(() => null);
+    const playlist = await this.safeGetPlaylist(playlistId);
     if (!playlist) throw new HttpError(404, ErrorCode.NOT_FOUND, 'Playlist not found');
 
     const targetFormat = format ?? 'mp3';
@@ -127,7 +127,7 @@ export class DownloadsService {
   }
 
   async createPlaylist(userId: string, playlistId: string, format: AudioFormat, quality: AudioQuality) {
-    const playlist = await this.providers.getPlaylist(playlistId).catch(() => null);
+    const playlist = await this.safeGetPlaylist(playlistId);
     if (!playlist) throw new HttpError(404, ErrorCode.NOT_FOUND, 'Playlist not found');
 
     const { queued } = this.selectTracks(playlist.videos);
@@ -263,6 +263,22 @@ export class DownloadsService {
     }
 
     return { path: job.filePath, filename: basename(job.filePath) };
+  }
+
+  private async safeGetVideo(videoId: string): Promise<Video | null> {
+    try {
+      return await this.providers.getVideo(videoId);
+    } catch {
+      return null;
+    }
+  }
+
+  private async safeGetPlaylist(playlistId: string) {
+    try {
+      return await this.providers.getPlaylist(playlistId);
+    } catch {
+      return null;
+    }
   }
 
   private outputBitrate(format: AudioFormat, quality: AudioQuality): number {

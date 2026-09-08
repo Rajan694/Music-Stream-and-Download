@@ -21,7 +21,10 @@ RUN npm run build -w backend
 
 FROM node:22-alpine AS production
 
-RUN apk add --no-cache tini
+# yt-dlp is a suggestions/metadata provider fallback here (the worker does the
+# actual downloads); --ignore-scripts above skips youtube-dl-exec's postinstall,
+# so the vendored binary never lands — install the system package instead.
+RUN apk add --no-cache tini yt-dlp
 
 WORKDIR /app
 
@@ -40,6 +43,7 @@ RUN npx prisma generate --schema=packages/db/prisma/schema.prisma
 
 ENV NODE_ENV=production
 ENV API_PORT=4000
+ENV YT_DLP_PATH=/usr/bin/yt-dlp
 
 EXPOSE 4000
 

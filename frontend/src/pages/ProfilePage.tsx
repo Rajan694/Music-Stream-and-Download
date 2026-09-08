@@ -34,7 +34,11 @@ export function ProfilePage() {
   });
 
   const onLogout = async () => {
-    await apiClient.logout().catch(() => undefined);
+    try {
+      await apiClient.logout();
+    } catch {
+      // Ignore — clear local session regardless of server-side logout result.
+    }
     clearAuth();
     navigate("/login");
   };

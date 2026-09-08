@@ -42,18 +42,18 @@ export function PlaylistDownloadButton({ playlistId }: { playlistId: string }) {
 
     let cancelled = false;
 
-    apiClient
-      .estimatePlaylistDownload(playlistId, format, quality)
-      .then((result) => {
+    (async () => {
+      try {
+        const result = await apiClient.estimatePlaylistDownload(playlistId, format, quality);
         if (cancelled) return;
         setEstimate({ profile: `${format}:${quality}`, data: result });
         setError("");
-      })
-      .catch((e: unknown) => {
+      } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : "Estimate failed");
         }
-      });
+      }
+    })();
 
     return () => {
       cancelled = true;

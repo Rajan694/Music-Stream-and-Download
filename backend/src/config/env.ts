@@ -89,6 +89,7 @@ const EnvSchema = z.object({
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('30d'),
   COOKIE_DOMAIN: z.string().default('localhost'),
+  COOKIE_SECURE: z.enum(['true', 'false']).optional(),
   GOOGLE_CLIENT_ID: z.string().default(''),
   GOOGLE_CLIENT_SECRET: z.string().default(''),
   GOOGLE_CALLBACK_URL: z

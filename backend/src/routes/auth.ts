@@ -16,7 +16,7 @@ export function createAuthRouter(container: Container) {
   function cookieOptions() {
     return {
       httpOnly: true,
-      secure: env.NODE_ENV === 'production',
+      secure: env.COOKIE_SECURE ? env.COOKIE_SECURE === 'true' : env.NODE_ENV === 'production',
       sameSite: 'lax' as const,
       domain: env.COOKIE_DOMAIN || undefined,
       path: '/',

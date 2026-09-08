@@ -79,19 +79,17 @@ export function PlayerProvider() {
     ) {
       if (queueIndex >= queue.length - 1 && repeatMode !== "one") {
         fetchedSuggestionsRef.current = currentTrack.id;
-        apiClient
-          .getSuggestions(currentTrack.id)
-          .then((suggestions) => {
+        (async () => {
+          try {
+            const suggestions = await apiClient.getSuggestions(currentTrack.id);
             if (suggestions && suggestions.length > 0) {
-              apiClient
-                .getVideo(suggestions[0].id)
-                .then((video) => {
-                  addToQueue(video);
-                })
-                .catch(console.error);
+              const video = await apiClient.getVideo(suggestions[0].id);
+              addToQueue(video);
             }
-          })
-          .catch(console.error);
+          } catch (e) {
+            console.error(e);
+          }
+        })();
       }
     }
   }, [

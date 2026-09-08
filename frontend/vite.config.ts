@@ -8,7 +8,7 @@ export default defineConfig({
   resolve: { alias: { "@": path.resolve(__dirname, "src") } },
   server: {
     port: 3000,
-    strictPort: true,
+    strictPort: false,
     watch: {
       // Five watchers run side by side in `npm run dev`. Every watched
       // directory costs an inotify instance, and the per-user cap is low
