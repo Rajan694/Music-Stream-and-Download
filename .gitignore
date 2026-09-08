@@ -37,3 +37,6 @@ Thumbs.db
 
 # Coverage
 coverage/
+
+# Frontend build
+frontend/dist/

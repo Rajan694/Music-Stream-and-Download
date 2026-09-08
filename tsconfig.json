@@ -1,0 +1,12 @@
+{
+  // Solution-style root: owns no files, only the build order. `tsc -b` walks
+  // the references so shared/db are built before their consumers, which is
+  // what the hand-ordered build steps in the old run.sh existed to do.
+  "files": [],
+  "references": [
+    { "path": "./packages/shared" },
+    { "path": "./packages/db" },
+    { "path": "./backend" },
+    { "path": "./worker" }
+  ]
+}

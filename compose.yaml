@@ -21,21 +21,11 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    # Metadata cache only — every key carries a TTL and nothing here is a source
-    # of truth, so evicting under pressure is correct rather than data loss.
-    command:
-      [
-        "redis-server",
-        "--maxmemory",
-        "256mb",
-        "--maxmemory-policy",
-        "allkeys-lru",
-        "--save",
-        "",
-      ]
+    # Backs both the metadata cache and the BullMQ download queue. No maxmemory
+    # and no LRU policy on purpose: evicting a queue key loses a job, so this
+    # is a source of truth now, unlike when it was cache-only.
+    command: ["redis-server", "--appendonly", "yes"]
     ports:
-      # Host port offset like postgres, so a Redis already running on the
-      # default port is not shadowed by this one.
       - "6380:6379"
     volumes:
       - redis_data:/data
@@ -45,13 +35,11 @@ services:
       timeout: 5s
       retries: 5
 
-  # ── Production services (activate with: docker compose --profile prod up) ────
-
-  api:
+  backend:
     profiles: ["prod"]
     build:
       context: .
-      dockerfile: docker/api.Dockerfile
+      dockerfile: docker/backend.Dockerfile
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -74,9 +62,13 @@ services:
       MAX_DOWNLOAD_SIZE: "${MAX_DOWNLOAD_SIZE:-52428800}"
       MAX_DOWNLOAD_DURATION: "${MAX_DOWNLOAD_DURATION:-1800}"
       MAX_PLAYLIST_ITEMS: "${MAX_PLAYLIST_ITEMS:-50}"
-      DOWNLOAD_TOKEN_SECRET: "${DOWNLOAD_TOKEN_SECRET}"
+      JOB_TIMEOUT_MS: "${JOB_TIMEOUT_MS:-600000}"
+      QUEUE_ATTEMPTS: "${QUEUE_ATTEMPTS:-3}"
+      QUEUE_BACKOFF_MS: "${QUEUE_BACKOFF_MS:-5000}"
     ports:
       - "4000:4000"
+    volumes:
+      - worker_tmp:/tmp/music-media
     depends_on:
       postgres:
         condition: service_healthy
@@ -98,9 +90,10 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      WORKER_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/music?schema=public
-      WORKER_PIPED_API_URL: "${PIPED_API_URL:-https://api.piped.private.coffee}"
-      WORKER_MEDIA_TEMP_DIR: /tmp/music-media
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/music?schema=public
+      PIPED_API_URL: "${PIPED_API_URL:-https://api.piped.private.coffee}"
+      MEDIA_TEMP_DIR: /tmp/music-media
       FFMPEG_PATH: /usr/bin/ffmpeg
       YT_DLP_PATH: /usr/bin/yt-dlp
       WORKER_CONCURRENCY: "${WORKER_CONCURRENCY:-2}"
@@ -113,7 +106,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    # Resource limits — hard caps to prevent runaway encoding from OOM'ing the host.
+      redis:
+        condition: service_healthy
     deploy:
       resources:
         limits:
@@ -123,22 +117,27 @@ services:
           cpus: "0.5"
           memory: 256M
 
-  web:
+  frontend:
     profiles: ["prod"]
     build:
       context: .
-      dockerfile: docker/web.Dockerfile
+      dockerfile: docker/frontend.Dockerfile
+      args:
+        # VITE_* is inlined at build time, so this must be a build arg — an
+        # `environment:` entry here would silently do nothing.
+        VITE_API_URL: "${VITE_API_URL:-http://localhost:4000/api/v1}"
     restart: unless-stopped
-    environment:
-      NODE_ENV: production
-      NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL:-http://localhost:4000/api/v1}"
-      NEXT_PUBLIC_APP_URL: "${NEXT_PUBLIC_APP_URL:-http://localhost:3000}"
-      NEXT_PUBLIC_GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID}"
     ports:
-      - "3000:3000"
+      - "3000:80"
     depends_on:
-      api:
+      backend:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 volumes:
   postgres_data:

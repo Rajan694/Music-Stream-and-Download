@@ -7,6 +7,8 @@
     "skipLibCheck": true,
     "declaration": true,
     "sourceMap": true,
-    "resolvePackageJsonExports": true
+    "resolvePackageJsonExports": true,
+    // Required by the root solution tsconfig's project references.
+    "composite": true
   }
 }

@@ -1,0 +1,27 @@
+{
+  "name": "@music/worker",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "tsc -b",
+    "start": "node dist/main.js",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@music/db": "*",
+    "@music/shared": "*",
+    "bullmq": "^5.15.0",
+    "dotenv": "17.4.2",
+    "ioredis": "6.0.0",
+    "youtube-dl-exec": "3.1.13"
+  },
+  "devDependencies": {
+    "@music/config": "*",
+    "@types/node": "^20",
+    "eslint": "9.39.5",
+    "tsx": "4.23.13",
+    "typescript": "~6.0.2"
+  }
+}

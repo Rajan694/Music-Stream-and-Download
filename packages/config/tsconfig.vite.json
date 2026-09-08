@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"],
+    // Vite owns the emit. Type-checking only, so the project is not composite
+    // and is not part of the root `tsc -b` graph.
+    "noEmit": true,
+    "composite": false,
+    "declaration": false
+  }
+}

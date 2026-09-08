@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <title>StreamMusic</title>
+    <meta name="description" content="Music streaming and download via provider layers">
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="white">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="black">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <script>
+      try {
+        let theme;
+        const raw = localStorage.getItem('music-stream:preferences');
+        if (raw) {
+          try { theme = JSON.parse(raw).theme; } catch (_) {}
+        }
+        if (!theme && localStorage.theme) {
+          theme = localStorage.theme;
+        }
+        const prefersLight = theme === 'light' || (!theme || theme === 'system') && window.matchMedia('(prefers-color-scheme: light)').matches;
+        if (prefersLight) {
+          document.documentElement.classList.remove('dark');
+        } else {
+          document.documentElement.classList.add('dark');
+        }
+      } catch (_) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

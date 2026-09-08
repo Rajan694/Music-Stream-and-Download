@@ -2,7 +2,9 @@
   "name": "music-stream",
   "private": true,
   "workspaces": [
-    "apps/*",
+    "frontend",
+    "backend",
+    "worker",
     "packages/*"
   ],
   "engines": {
@@ -10,20 +12,34 @@
   },
   "packageManager": "npm@11.14.1",
   "scripts": {
-    "dev": "./scripts/run.sh dev",
-    "build": "./scripts/run.sh build",
-    "lint": "./scripts/run.sh lint",
+    "setup": "npm install --no-engine-strict && npm run db:generate && npm run build -w packages/shared && npm run build -w packages/db",
+    "predev": "npm run build -w packages/shared && npm run build -w packages/db",
+    "dev": "concurrently -n shared,db,backend,worker,frontend -c blue,magenta,green,yellow,cyan \"npm:dev:shared\" \"npm:dev:db\" \"npm:dev:backend\" \"npm:dev:worker\" \"npm:dev:frontend\"",
+    "dev:shared": "npm run build -w packages/shared -- --watch --preserveWatchOutput",
+    "dev:db": "npm run build -w packages/db -- --watch --preserveWatchOutput",
+    "dev:backend": "npm run dev -w backend",
+    "dev:worker": "npm run dev -w worker",
+    "dev:frontend": "npm run dev -w frontend",
+    "build": "tsc -b && npm run build -w frontend",
+    "typecheck": "tsc -b && npm run typecheck -w frontend",
+    "lint": "eslint .",
+    "infra:up": "docker compose up -d postgres redis",
+    "infra:down": "docker compose down",
+    "docker:build": "docker compose --profile prod build",
+    "docker:up": "docker compose --profile prod up -d",
     "db:generate": "npm run db:generate -w packages/db",
     "db:migrate": "npm run db:migrate -w packages/db",
     "db:studio": "npm run db:studio -w packages/db"
   },
   "devDependencies": {
+    "concurrently": "^9.1.0",
     "prettier": "^3.3.3",
     "typescript": "~6.0.2",
     "eslint": "9.39.5",
     "typescript-eslint": "8.69.0",
     "@eslint/js": "9.39.5",
-    "eslint-config-next": "16.3.4",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
     "@music/config": "*"
   }
 }
