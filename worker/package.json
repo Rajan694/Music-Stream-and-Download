@@ -12,7 +12,7 @@
   "dependencies": {
     "@music/db": "*",
     "@music/shared": "*",
-    "bullmq": "^5.15.0",
+    "bullmq": "^6.3.4",
     "dotenv": "17.4.2",
     "ioredis": "6.0.0",
     "youtube-dl-exec": "3.1.13"
@@ -20,7 +20,7 @@
   "devDependencies": {
     "@music/config": "*",
     "@types/node": "^20",
-    "eslint": "9.39.5",
+    "eslint": "10.10.0",
     "tsx": "4.23.13",
     "typescript": "~6.0.2"
   }

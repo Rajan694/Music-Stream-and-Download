@@ -3,6 +3,9 @@ import { MediaProvider } from './media-provider.interface.js';
 import { PipedProvider } from './piped.provider.js';
 import { YtDlpProvider } from './yt-dlp.provider.js';
 import { ProviderException } from '../../errors/provider.exception.js';
+import { logger } from '../../lib/logger.js';
+
+const log = logger.create('ProviderChain');
 
 interface CircuitState {
   failures: number;
@@ -52,7 +55,7 @@ export class ProviderChain implements MediaProvider {
   private recordSuccess(key: string): void {
     const state = this.circuit(key);
     if (state.isOpen || state.failures > 0) {
-      console.log(`Provider ${key} recovered`);
+      log.log(`Provider ${key} recovered`);
     }
     state.failures = 0;
     state.isOpen = false;
@@ -66,7 +69,7 @@ export class ProviderChain implements MediaProvider {
       state.openedAt = Date.now();
       if (!state.isOpen) {
         state.isOpen = true;
-        console.warn(`Provider ${key} circuit opened after ${state.failures} consecutive failures`);
+        log.warn(`Provider ${key} circuit opened after ${state.failures} consecutive failures`);
       }
     }
   }
@@ -79,7 +82,7 @@ export class ProviderChain implements MediaProvider {
       const key = `${provider.name}:${operation}`;
 
       if (!this.isAvailable(key)) {
-        console.debug(`Skipping ${provider.name} for ${operation} (circuit open)`);
+        log.debug(`Skipping ${provider.name} for ${operation} (circuit open)`);
         continue;
       }
 
@@ -97,7 +100,7 @@ export class ProviderChain implements MediaProvider {
         }
 
         if (error instanceof ProviderException && error.code === ErrorCode.UNSUPPORTED_OPERATION) {
-          console.debug(`${provider.name} does not support ${operation}`);
+          log.debug(`${provider.name} does not support ${operation}`);
           attempted.pop();
           continue;
         }

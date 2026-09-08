@@ -118,11 +118,18 @@ export function PlayerProvider() {
     });
   }, [queue, queueIndex, repeatMode, streamQuality, API_URL]);
 
+  // Swapping the audio source is driven by the track and the quality only.
+  // Playback position and play/pause state are read straight from the store
+  // instead of being closed over: `currentTime` ticks on every timeupdate, so
+  // depending on it would rebuild `audio.src` several times a second.
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
 
-    if (fetchedSuggestionsRef.current !== currentTrack.id && currentTime < 5) {
+    const { currentTime: position, isPlaying: playing } =
+      usePlayerStore.getState();
+
+    if (fetchedSuggestionsRef.current !== currentTrack.id && position < 5) {
       fetchedSuggestionsRef.current = null;
     }
 
@@ -155,7 +162,7 @@ export function PlayerProvider() {
     }
 
     audio.src = targetSrc;
-    if (isPlaying) {
+    if (playing) {
       audio.play().catch((e) => console.error("Auto-play prevented", e));
     }
   }, [currentTrack, streamQuality, API_URL]);

@@ -1,7 +1,9 @@
 import { Redis } from 'ioredis';
 import { CacheStore } from './cache.store.js';
+import { logger } from '../lib/logger.js';
 
 const KEY_PREFIX = 'music:cache:';
+const log = logger.create('RedisCache');
 
 /**
  * Redis-backed metadata cache. Survives restarts.
@@ -24,17 +26,17 @@ export class RedisCacheStore extends CacheStore {
 
     this.redis.on('error', (error: Error) => this.markDegraded(error));
     this.redis.on('ready', () => {
-      if (this.degraded) console.log('[RedisCache] Redis cache recovered');
+      if (this.degraded) log.log('Redis cache recovered');
       this.degraded = false;
-      console.log('[RedisCache] Redis cache connected');
+      log.log('Redis cache connected');
     });
   }
 
   private markDegraded(error: unknown): void {
     if (this.degraded) return;
     this.degraded = true;
-    console.warn(
-      `[RedisCache] Redis cache unavailable, falling through to upstream: ${(error as Error).message}`,
+    log.warn(
+      `Redis cache unavailable, falling through to upstream: ${(error as Error).message}`,
     );
   }
 

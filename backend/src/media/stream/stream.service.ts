@@ -6,6 +6,9 @@ import { ProviderChain } from '../providers/provider-chain.js';
 import { CacheStore } from '../../cache/cache.store.js';
 import { ProviderException } from '../../errors/provider.exception.js';
 import { MediaConfig } from '../config.js';
+import { logger } from '../../lib/logger.js';
+
+const log = logger.create('StreamService');
 
 const TARGET_BITRATE: Record<AudioQuality, number> = {
   low: 64_000,
@@ -99,10 +102,10 @@ export class StreamService {
       );
     } catch (error) {
       if (abort.signal.aborted || res.destroyed) {
-        console.debug(`Client aborted stream for ${videoId}`);
+        log.debug(`Client aborted stream for ${videoId}`);
         return;
       }
-      console.error(`Relay failed for ${videoId}: ${(error as Error).message}`);
+      log.error(`Relay failed for ${videoId}: ${(error as Error).message}`);
       if (!res.headersSent) {
         throw new ProviderException(ErrorCode.STREAM_ERROR, 'Stream relay failed', error);
       }

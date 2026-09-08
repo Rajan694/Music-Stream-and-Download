@@ -99,7 +99,9 @@ npm run db:studio    # Open Prisma Studio
 ## Windows Notes
 
 - Install ffmpeg and add to PATH, or set `FFMPEG_PATH`.
-- yt-dlp binary resolves to `yt-dlp.exe` automatically.
+- Install yt-dlp and add it to PATH, or set `YT_DLP_PATH`. It is no longer
+  downloaded at install time: youtube-dl-exec's scripts are denied in the root
+  `allowScripts`, which also removes its Python requirement.
 - Argon2 and Prisma need MSVC build tools — install the "Desktop development with
   C++" workload from Visual Studio Build Tools.
 - Use Docker Desktop with WSL2 backend for Compose services.
