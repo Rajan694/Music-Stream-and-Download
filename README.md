@@ -45,6 +45,13 @@ This starts:
 - Worker (background downloads)
 - PostgreSQL at localhost:5436
 - Redis at localhost:6380
+- Self-hosted Piped stack:
+  - `piped-backend` at http://localhost:7081
+  - `piped-proxy` at http://localhost:7082
+  - `piped-bg-helper` (internal PoToken provider)
+  - `piped-db` (internal Postgres)
+
+> **Note:** First boot of Piped runs Hibernate database migrations and may take 1-2 minutes (~1 GB initial Docker image downloads).
 
 ## Environment Variables
 
@@ -52,7 +59,7 @@ Copy `.env.example` to `.env` and fill in:
 
 - `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` — min 32 chars (`openssl rand -base64 48`)
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — for OAuth (optional)
-- `PIPED_API_URL` — Piped instance for metadata (default: https://api.piped.private.coffee)
+- `PIPED_API_URL` — self-hosted Piped API (default: `http://localhost:7081`)
 - `REDIS_URL` — backs both the metadata cache and the job queue. The backend
   enqueues here and the worker consumes from here, so both must resolve to the
   same instance (`docker compose` publishes Redis on **6380**).

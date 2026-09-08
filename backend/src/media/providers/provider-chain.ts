@@ -24,11 +24,14 @@ export class ProviderChain implements MediaProvider {
   private readonly failureThreshold = 5;
   private readonly cooldownMs = 60_000;
 
+  // Circuits are keyed by provider *and* operation. A provider can be healthy
+  // for one call and structurally broken for another — a Piped build that
+  // serves search fine but never returns audio streams is the motivating case.
+  // Keying on the provider alone let those getVideo failures disable search
+  // too, and let a successful search reset the count so getVideo never stopped
+  // paying the full timeout.
   constructor(piped: PipedProvider, ytDlp: YtDlpProvider) {
     this.providers = [piped, ytDlp];
-    for (const provider of this.providers) {
-      this.circuits.set(provider.name, { failures: 0, openedAt: 0, isOpen: false });
-    }
   }
 
   private circuit(name: string): CircuitState {
@@ -46,24 +49,24 @@ export class ProviderChain implements MediaProvider {
     return Date.now() - state.openedAt >= this.cooldownMs;
   }
 
-  private recordSuccess(name: string): void {
-    const state = this.circuit(name);
+  private recordSuccess(key: string): void {
+    const state = this.circuit(key);
     if (state.isOpen || state.failures > 0) {
-      console.log(`Provider ${name} recovered`);
+      console.log(`Provider ${key} recovered`);
     }
     state.failures = 0;
     state.isOpen = false;
   }
 
-  private recordFailure(name: string): void {
-    const state = this.circuit(name);
+  private recordFailure(key: string): void {
+    const state = this.circuit(key);
     state.failures++;
 
     if (state.failures >= this.failureThreshold) {
       state.openedAt = Date.now();
       if (!state.isOpen) {
         state.isOpen = true;
-        console.warn(`Provider ${name} circuit opened after ${state.failures} consecutive failures`);
+        console.warn(`Provider ${key} circuit opened after ${state.failures} consecutive failures`);
       }
     }
   }
@@ -73,7 +76,9 @@ export class ProviderChain implements MediaProvider {
     let lastError: unknown;
 
     for (const provider of this.providers) {
-      if (!this.isAvailable(provider.name)) {
+      const key = `${provider.name}:${operation}`;
+
+      if (!this.isAvailable(key)) {
         console.debug(`Skipping ${provider.name} for ${operation} (circuit open)`);
         continue;
       }
@@ -81,13 +86,13 @@ export class ProviderChain implements MediaProvider {
       attempted.push(provider.name);
       try {
         const result = await fn(provider);
-        this.recordSuccess(provider.name);
+        this.recordSuccess(key);
         return result;
       } catch (error) {
         lastError = error;
 
         if (error instanceof ProviderException && TERMINAL_CODES.has(error.code)) {
-          this.recordSuccess(provider.name);
+          this.recordSuccess(key);
           throw error;
         }
 
@@ -97,7 +102,7 @@ export class ProviderChain implements MediaProvider {
           continue;
         }
 
-        this.recordFailure(provider.name);
+        this.recordFailure(key);
         console.warn(`${provider.name} failed ${operation}: ${(error as Error).message}`);
       }
     }

@@ -86,7 +86,49 @@ function runYtDlp(
   });
 }
 
-async function resolveAudioUrl(videoId: string): Promise<{
+const RESOLVE_TIMEOUT_MS = Number(process.env.RESOLVE_TIMEOUT_MS ?? 60_000);
+
+async function resolveViaPiped(videoId: string): Promise<{
+  url: string;
+  codec?: string;
+  ext?: string;
+  duration?: number;
+  title: string;
+}> {
+  const base = process.env.PIPED_API_URL ?? "http://localhost:7081";
+  const res = await fetch(`${base}/streams/${videoId}`, {
+    signal: AbortSignal.timeout(RESOLVE_TIMEOUT_MS),
+  });
+  if (!res.ok) throw new Error(`Piped returned ${res.status}`);
+
+  const data = (await res.json()) as {
+    error?: string;
+    duration?: number;
+    title?: string;
+    audioStreams?: Array<{
+      url: string;
+      bitrate: number;
+      codec: string;
+      mimeType: string;
+    }>;
+  };
+  if (data.error) throw new Error(`Piped error: ${data.error}`);
+
+  const streams = data.audioStreams ?? [];
+  if (streams.length === 0) throw new Error("Piped returned no audio streams");
+
+  const best = streams.reduce((a, b) => (b.bitrate > a.bitrate ? b : a));
+
+  return {
+    url: best.url,
+    codec: best.codec,
+    ext: best.mimeType?.includes("webm") ? "webm" : "m4a",
+    duration: data.duration,
+    title: data.title ?? videoId,
+  };
+}
+
+async function resolveViaYtDlp(videoId: string): Promise<{
   url: string;
   codec?: string;
   ext?: string;
@@ -122,6 +164,21 @@ async function resolveAudioUrl(videoId: string): Promise<{
     duration: data?.duration,
     title: data?.title ?? videoId,
   };
+}
+
+async function resolveAudioUrl(videoId: string): Promise<{
+  url: string;
+  codec?: string;
+  ext?: string;
+  duration?: number;
+  title: string;
+}> {
+  try {
+    return await resolveViaPiped(videoId);
+  } catch (err) {
+    console.warn(`Piped resolve failed for ${videoId}, falling back to yt-dlp:`, err);
+    return resolveViaYtDlp(videoId);
+  }
 }
 
 function guardDuration(duration: number | undefined, maxSeconds: number): void {

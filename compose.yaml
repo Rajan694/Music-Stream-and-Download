@@ -56,8 +56,11 @@ services:
       GOOGLE_CALLBACK_URL: "${GOOGLE_CALLBACK_URL:-http://localhost:4000/api/v1/auth/google/callback}"
       FRONTEND_URL: "${FRONTEND_URL:-http://localhost:3000}"
       CORS_ORIGINS: "${CORS_ORIGINS:-http://localhost:3000}"
-      PIPED_API_URL: "${PIPED_API_URL:-https://api.piped.private.coffee}"
-      PIPED_FALLBACK_URLS: "${PIPED_FALLBACK_URLS}"
+      # Container-internal address, not the host-published 7081. Hardcoded on
+      # purpose: `${PIPED_API_URL}` would interpolate the repo .env value, which
+      # is the localhost URL the *host* uses and resolves to this container here.
+      PIPED_API_URL: "http://piped-backend:8080"
+      PIPED_FALLBACK_URLS: ""
       REDIS_URL: redis://redis:6379
       MEDIA_TEMP_DIR: /tmp/music-media
       MAX_DOWNLOAD_SIZE: "${MAX_DOWNLOAD_SIZE:-52428800}"
@@ -76,8 +79,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test:
-        ["CMD", "wget", "--spider", "-q", "http://localhost:4000/api/v1/health"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4000/api/v1/health"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -93,7 +95,7 @@ services:
       NODE_ENV: production
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/music?schema=public
-      PIPED_API_URL: "${PIPED_API_URL:-https://api.piped.private.coffee}"
+      PIPED_API_URL: "http://piped-backend:8080"
       MEDIA_TEMP_DIR: /tmp/music-media
       FFMPEG_PATH: /usr/bin/ffmpeg
       YT_DLP_PATH: /usr/bin/yt-dlp
@@ -117,6 +119,42 @@ services:
         reservations:
           cpus: "0.5"
           memory: 256M
+
+  piped-db:
+    image: pgautoupgrade/pgautoupgrade:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: piped
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: piped
+    volumes:
+      - piped_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U piped -d piped"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  piped-bg-helper:
+    image: 1337kavin/bg-helper-server:latest
+    restart: unless-stopped
+
+  piped-backend:
+    image: 1337kavin/piped:latest
+    restart: unless-stopped
+    ports:
+      - "7081:8080"
+    volumes:
+      - ./docker/piped/config.properties:/app/config.properties:ro
+    depends_on:
+      piped-db:
+        condition: service_healthy
+
+  piped-proxy:
+    image: 1337kavin/piped-proxy:latest
+    restart: unless-stopped
+    ports:
+      - "7082:8080"
 
   frontend:
     profiles: ["prod"]
@@ -144,3 +182,4 @@ volumes:
   postgres_data:
   redis_data:
   worker_tmp:
+  piped_db_data:

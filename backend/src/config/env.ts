@@ -55,7 +55,7 @@ const EnvSchema = z.object({
   API_PORT: z.coerce.number().int().positive().default(4000),
   CORS_ORIGINS: z.string().default('http://localhost:3000'),
 
-  PIPED_API_URL: z.url().default('https://api.piped.private.coffee'),
+  PIPED_API_URL: z.url().default('http://localhost:7081'),
   PIPED_FALLBACK_URLS: z.string().default(''),
 
   PROVIDER_TIMEOUT_MS: z.coerce.number().int().positive().default(8000),
@@ -82,6 +82,15 @@ const EnvSchema = z.object({
     .int()
     .positive()
     .default(60 * 60_000),
+  // Resolving a stream URL costs a ~3.5s yt-dlp spawn, while a cache hit serves
+  // in ~20ms, so this TTL is what separates an instant replay from a stall.
+  // googlevideo URLs carry `expire` about 6h out; 4h keeps a safety margin, and
+  // StreamService evicts the key on the first bad upstream response anyway.
+  CACHE_STREAM_TTL_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(4 * 60 * 60_000),
   CACHE_MAX_ENTRIES: z.coerce.number().int().positive().default(1000),
 
   JWT_ACCESS_SECRET: z.string().min(32).optional(),

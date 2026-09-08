@@ -5,14 +5,13 @@ import { AudioQuality, AudioStream, ErrorCode } from '@music/shared';
 import { ProviderChain } from '../providers/provider-chain.js';
 import { CacheStore } from '../../cache/cache.store.js';
 import { ProviderException } from '../../errors/provider.exception.js';
+import { MediaConfig } from '../config.js';
 
 const TARGET_BITRATE: Record<AudioQuality, number> = {
   low: 64_000,
   medium: 128_000,
   high: 192_000,
 };
-
-const STREAM_URL_TTL_MS = 15 * 60_000;
 
 const UPSTREAM_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -21,6 +20,7 @@ export class StreamService {
   constructor(
     private readonly providers: ProviderChain,
     private readonly cache: CacheStore,
+    private readonly config: MediaConfig,
   ) {}
 
   private selectStream(streams: AudioStream[], quality: AudioQuality): AudioStream {
@@ -38,7 +38,7 @@ export class StreamService {
   }
 
   private resolveStreamUrl(videoId: string, quality: AudioQuality): Promise<string> {
-    return this.cache.wrap(`stream:${videoId}:${quality}`, STREAM_URL_TTL_MS, async () => {
+    return this.cache.wrap(`stream:${videoId}:${quality}`, this.config.streamTtlMs, async () => {
       const video = await this.providers.getVideo(videoId);
 
       if (!video.audioStreams.length) {

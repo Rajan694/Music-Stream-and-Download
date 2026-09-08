@@ -32,7 +32,7 @@ export function createContainer(env: Env) {
   const history = new HistoryService(prisma);
   const playlists = new PlaylistsService(prisma);
   const settings = new SettingsService(prisma);
-  const stream = new StreamService(providers, cache);
+  const stream = new StreamService(providers, cache, mediaConfig);
   const requireAuth = createRequireAuth(prisma);
 
   return {

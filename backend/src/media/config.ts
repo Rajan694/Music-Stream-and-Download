@@ -43,6 +43,10 @@ export class MediaConfig {
     return this.env.CACHE_PLAYLIST_TTL_MS;
   }
 
+  get streamTtlMs(): number {
+    return this.env.CACHE_STREAM_TTL_MS;
+  }
+
   get cacheMaxEntries(): number {
     return this.env.CACHE_MAX_ENTRIES;
   }
