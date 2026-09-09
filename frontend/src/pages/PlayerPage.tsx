@@ -13,6 +13,7 @@ import {
   MdSkipPrevious,
 } from "react-icons/md";
 import { SeekBar } from "../components/player/SeekBar";
+import { useAuthStore } from "../stores/auth.store";
 
 function formatTime(seconds: number) {
   if (!seconds || isNaN(seconds)) return "0:00";
@@ -40,6 +41,7 @@ export function PlayerPage() {
   } = usePlayerStore();
 
   const [isQueueOpen, setIsQueueOpen] = useState(false);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   if (!currentTrack) {
     return (
@@ -131,13 +133,17 @@ export function PlayerPage() {
         </div>
 
         <div className="mt-8 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
-          <button
-            onClick={() => globalThis.openDownloadDialog?.()}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
-          >
-            <MdDownload className="w-4 h-4" />
-            Download
-          </button>
+          {isAuthenticated ? (
+            <button
+              onClick={() => globalThis.openDownloadDialog?.()}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+            >
+              <MdDownload className="w-4 h-4" />
+              Download
+            </button>
+          ) : (
+            <span />
+          )}
           <button
             onClick={() => setIsQueueOpen(!isQueueOpen)}
             className="text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:text-blue-500 flex items-center gap-2"

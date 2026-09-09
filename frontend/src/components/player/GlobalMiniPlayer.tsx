@@ -9,6 +9,7 @@ import {
   MdSkipPrevious,
 } from "react-icons/md";
 import { SeekBar } from "./SeekBar";
+import { useAuthStore } from "../../stores/auth.store";
 
 function formatTime(seconds: number) {
   if (!seconds || isNaN(seconds)) return "0:00";
@@ -19,6 +20,7 @@ function formatTime(seconds: number) {
 
 export function GlobalMiniPlayer() {
   const { pathname } = useLocation();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const {
     currentTrack,
     isPlaying,
@@ -91,13 +93,15 @@ export function GlobalMiniPlayer() {
         </div>
 
         <div className="flex items-center justify-end gap-3 w-1/3 text-xs text-zinc-500 font-medium tabular-nums">
-          <button
-            onClick={() => globalThis.openDownloadDialog?.()}
-            className="p-1.5 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-500 hover:text-blue-500 transition-colors"
-            aria-label="Download current track"
-          >
-            <MdDownload className="w-4 h-4" />
-          </button>
+          {isAuthenticated && (
+            <button
+              onClick={() => globalThis.openDownloadDialog?.()}
+              className="p-1.5 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-500 hover:text-blue-500 transition-colors"
+              aria-label="Download current track"
+            >
+              <MdDownload className="w-4 h-4" />
+            </button>
+          )}
           <span>
             {formatTime(currentTime)} /{" "}
             {formatTime(duration || currentTrack.duration)}

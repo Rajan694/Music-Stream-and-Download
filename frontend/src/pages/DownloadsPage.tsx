@@ -1,7 +1,9 @@
+import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
-import { MdDownload, MdError } from "react-icons/md";
+import { MdError } from "react-icons/md";
 import { apiClient } from "../lib/api";
+import { saveCompletedDownload } from "../lib/downloads-save";
 import { useAuthStore } from "../stores/auth.store";
 import { EmptyState, Spinner, ErrorState } from "../components/ui/States";
 
@@ -28,6 +30,25 @@ export function DownloadsPage() {
       return hasActive ? 3000 : false;
     },
   });
+
+  // Only jobs seen finishing *while this page is open* get saved. Firing on the
+  // first snapshot instead would dump every past download on the user's disk.
+  const seenStates = useRef(new Map<string, string>());
+
+  useEffect(() => {
+    if (!data) return;
+    const previous = seenStates.current;
+    const first = previous.size === 0;
+
+    for (const job of data) {
+      const before = previous.get(job.id);
+      previous.set(job.id, job.state);
+      if (first || before === undefined || before === job.state) continue;
+      if (job.state === "completed") {
+        void saveCompletedDownload(job.id, job.kind);
+      }
+    }
+  }, [data]);
 
   if (!isAuthenticated) {
     return (
@@ -136,18 +157,6 @@ export function DownloadsPage() {
                       View
                     </Link>
                   )}
-                  <a
-                    href={
-                      job.kind === "playlist"
-                        ? apiClient.playlistArchiveUrl(job.id)
-                        : apiClient.downloadFileUrl(job.id)
-                    }
-                    download
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-700"
-                  >
-                    <MdDownload className="w-4 h-4" />
-                    Save
-                  </a>
                 </div>
               )}
             </li>

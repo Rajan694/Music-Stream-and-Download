@@ -1,15 +1,20 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { useAuthStore } from "../stores/auth.store";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api/v1";
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const { setAuth } = useAuthStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(
+    params.get("error") === "oauth"
+      ? "Google sign-in did not complete. Please try again."
+      : "",
+  );
   const [loading, setLoading] = useState(false);
 
   const onSubmit = async (e: React.FormEvent) => {

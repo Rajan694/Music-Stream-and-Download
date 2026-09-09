@@ -23,6 +23,14 @@ export function SearchPage() {
   const playNextInQueue = usePlayerStore((s) => s.playNextInQueue);
   const addToQueue = usePlayerStore((s) => s.addToQueue);
 
+  // The input is local state so keystrokes don't hit the URL — and therefore the
+  // search query — until they settle. `pushedRef` holds the last value this page
+  // wrote to the URL, so an external change (back/forward, restore below) still
+  // syncs back into the box without clobbering what the user is mid-way typing.
+  const [input, setInput] = useState(q);
+  const pushedRef = useRef(q);
+  const debouncedInput = useDebounced(input, 400);
+
   // Restore last query when navigating to bare /search
   useEffect(() => {
     if (!q && lastSearchQuery) {
@@ -30,12 +38,30 @@ export function SearchPage() {
     }
   }, [q, lastSearchQuery, setParams]);
 
-  const fastQ = useDebounced(q, 400);
-  const showSuggestions = isFocused && fastQ.trim().length >= 2;
+  useEffect(() => {
+    if (q !== pushedRef.current) {
+      pushedRef.current = q;
+      setInput(q);
+    }
+  }, [q]);
+
+  useEffect(() => {
+    const value = debouncedInput.trim();
+    if (value === q) return;
+    pushedRef.current = value;
+    if (value) {
+      setParams({ q: value }, { replace: true });
+      setLastSearchQuery(value);
+    } else {
+      setParams({}, { replace: true });
+    }
+  }, [debouncedInput, q, setParams, setLastSearchQuery]);
+
+  const showSuggestions = isFocused && debouncedInput.trim().length >= 2;
 
   const { data: suggestions } = useQuery({
-    queryKey: ['search_suggestions', fastQ],
-    queryFn: () => apiClient.getSearchSuggestions(fastQ),
+    queryKey: ['search_suggestions', debouncedInput.trim()],
+    queryFn: () => apiClient.getSearchSuggestions(debouncedInput.trim()),
     enabled: showSuggestions,
     staleTime: 60_000,
   });
@@ -59,10 +85,14 @@ export function SearchPage() {
     staleTime: 5 * 60_000,
   });
 
-  const setQ = (value: string) => {
-    if (value.trim()) {
-      setParams({ q: value }, { replace: true });
-      setLastSearchQuery(value.trim());
+  // Bypasses the debounce for deliberate commits: suggestion clicks and Enter.
+  const commitQ = (value: string) => {
+    setInput(value);
+    const trimmed = value.trim();
+    pushedRef.current = trimmed;
+    if (trimmed) {
+      setParams({ q: trimmed }, { replace: true });
+      setLastSearchQuery(trimmed);
     } else {
       setParams({}, { replace: true });
     }
@@ -98,9 +128,15 @@ export function SearchPage() {
       >
         <input
           type="search"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
           onFocus={() => setIsFocused(true)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              commitQ(input);
+              setIsFocused(false);
+            }
+          }}
           placeholder="Paste URL or search keywords..."
           className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-4 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium"
           role="combobox"
@@ -121,7 +157,7 @@ export function SearchPage() {
                 tabIndex={-1}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
-                  setQ(suggestion);
+                  commitQ(suggestion);
                   setIsFocused(false);
                 }}
                 className="px-4 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer text-sm font-medium"

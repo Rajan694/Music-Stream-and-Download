@@ -1,11 +1,12 @@
 import { Link, useLocation } from "react-router";
 import { usePlayerStore } from "../../stores/player.store";
 import { useUIStore } from "../../stores/ui.store";
+import { useAuthStore } from "../../stores/auth.store";
 
 const NAV = [
   { href: "/search", label: "Search" },
   { href: "/queue", label: "Queue" },
-  { href: "/downloads", label: "Downloads" },
+  { href: "/downloads", label: "Downloads", authOnly: true },
   { href: "/profile", label: "Profile" },
 ];
 
@@ -13,6 +14,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const queueCount = usePlayerStore((s) => s.queue.length);
   const lastSearchQuery = useUIStore((s) => s.lastSearchQuery);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  // Downloads are an account feature; a guest only ever reaches a sign-in wall.
+  const nav = NAV.filter((item) => !item.authOnly || isAuthenticated);
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
@@ -30,7 +35,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </Link>
 
         <div className="space-y-1">
-          {NAV.map((item) => (
+          {nav.map((item) => (
             <Link
               key={item.href}
               to={item.href === '/search' ? searchHref : item.href}
@@ -57,7 +62,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </main>
 
       <nav className="lg:hidden absolute bottom-0 w-full h-16 border-t border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-zinc-950/90 backdrop-blur flex z-40">
-        {NAV.map((item) => (
+        {nav.map((item) => (
           <Link
             key={item.href}
             to={item.href === '/search' ? searchHref : item.href}

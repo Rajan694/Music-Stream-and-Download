@@ -2,8 +2,11 @@ import { useEffect, useRef } from "react";
 import { usePlayerStore } from "../../stores/player.store";
 import { usePreferencesStore } from "../../stores/preferences.store";
 import { recordGuestSong } from "../../lib/history";
+import { useMediaKeys } from "../../lib/useMediaKeys";
 
 export function PlayerProvider() {
+  useMediaKeys();
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const prefetchedStreamRef = useRef<string | null>(null);
   const streamQuality = usePreferencesStore((s) => s.streamQuality);

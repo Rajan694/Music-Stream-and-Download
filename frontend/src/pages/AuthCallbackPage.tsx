@@ -1,25 +1,24 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useAuthStore } from "../stores/auth.store";
-import { readGuestHistory } from "../lib/history";
 import { Spinner } from "../components/ui/States";
 
+/**
+ * Google redirects here after setting the refresh cookie. SessionProvider does
+ * the actual exchange on page load; this route just waits for that to settle and
+ * then gets out of the way — signed in or not.
+ */
 export function AuthCallbackPage() {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const bootstrapped = useAuthStore((s) => s.bootstrapped);
 
   useEffect(() => {
-    if (bootstrapped && !isAuthenticated) {
-      const local = readGuestHistory();
-      if (local.length > 0) {
-        // Could sync here
-      }
-      navigate("/search");
-    }
+    if (!bootstrapped) return;
+    navigate(isAuthenticated ? "/search" : "/login?error=oauth", {
+      replace: true,
+    });
   }, [bootstrapped, isAuthenticated, navigate]);
 
-  if (!bootstrapped) return <Spinner label="Completing sign in…" />;
-
-  return null;
+  return <Spinner label="Completing sign in…" />;
 }

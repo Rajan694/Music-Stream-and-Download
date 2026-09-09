@@ -5,6 +5,7 @@ import { usePlayerStore } from "../../stores/player.store";
 import { useAuthStore } from "../../stores/auth.store";
 import { usePreferencesStore } from "../../stores/preferences.store";
 import { apiClient } from "../../lib/api";
+import { saveCompletedDownload } from "../../lib/downloads-save";
 
 declare global {
   var openDownloadDialog: ((track?: Track) => void) | undefined;
@@ -22,6 +23,13 @@ function formatBytes(bytes: number | null): string {
 
 export function DownloadDialog() {
   const dialogRef = useRef<HTMLDialogElement | null>(null);
+
+  // Progress trackers outlive the dialog: closing it detaches the UI (see
+  // closeDialog) but the job keeps running and still saves itself on completion.
+  const attachedJobRef = useRef<string | null>(null);
+  const sourcesRef = useRef(new Set<EventSource>());
+  const timersRef = useRef(new Set<ReturnType<typeof setInterval>>());
+
   const playingTrack = usePlayerStore((s) => s.currentTrack);
   const [target, setTarget] = useState<Track | null>(null);
   const currentTrack = target ?? playingTrack;
@@ -74,11 +82,34 @@ export function DownloadDialog() {
         format,
         quality,
       );
+      attachedJobRef.current = job.id;
       trackProgress(job.id);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to start download");
       setState("failed");
     }
+  };
+
+  useEffect(() => {
+    const sources = sourcesRef.current;
+    const timers = timersRef.current;
+    return () => {
+      sources.forEach((es) => es.close());
+      timers.forEach((handle) => clearInterval(handle));
+    };
+  }, []);
+
+  const isAttached = (jobId: string) => attachedJobRef.current === jobId;
+
+  const onJobDone = (jobId: string) => {
+    void saveCompletedDownload(jobId);
+    if (isAttached(jobId)) setState("completed");
+  };
+
+  const onJobFailed = (jobId: string, errorCode: string | null) => {
+    if (!isAttached(jobId)) return;
+    setError(errorCode || "Download failed");
+    setState("failed");
   };
 
   const trackProgress = (jobId: string) => {
@@ -89,20 +120,26 @@ export function DownloadDialog() {
       const es = new EventSource(
         `${API_URL}/downloads/${jobId}/events?token=${token}`,
       );
+      sourcesRef.current.add(es);
+
+      const close = () => {
+        es.close();
+        sourcesRef.current.delete(es);
+      };
+
       es.onmessage = (ev) => {
         const data = JSON.parse(ev.data);
-        setProgress(data.progress ?? 0);
+        if (isAttached(jobId)) setProgress(data.progress ?? 0);
         if (data.state === "completed") {
-          es.close();
-          setState("completed");
+          close();
+          onJobDone(jobId);
         } else if (["failed", "cancelled"].includes(data.state)) {
-          es.close();
-          setError(data.errorCode || "Download failed");
-          setState("failed");
+          close();
+          onJobFailed(jobId, data.errorCode);
         }
       };
       es.onerror = () => {
-        es.close();
+        close();
         pollJob(jobId);
       };
       return;
@@ -113,29 +150,41 @@ export function DownloadDialog() {
 
   const pollJob = (jobId: string) => {
     const handle = setInterval(async () => {
+      const stop = () => {
+        clearInterval(handle);
+        timersRef.current.delete(handle);
+      };
+
       try {
         const job = await apiClient.getDownload(jobId);
-        setProgress(job.progress);
+        if (isAttached(jobId)) setProgress(job.progress);
         if (job.state === "completed") {
-          clearInterval(handle);
-          setState("completed");
+          stop();
+          onJobDone(jobId);
         } else if (["failed", "cancelled"].includes(job.state)) {
-          clearInterval(handle);
-          setError(job.errorCode || "Download failed");
-          setState("failed");
+          stop();
+          onJobFailed(jobId, job.errorCode);
         }
       } catch {
-        clearInterval(handle);
-        setState("failed");
-        setError("Lost connection to download");
+        stop();
+        onJobFailed(jobId, "Lost connection to download");
       }
     }, 2000);
+    timersRef.current.add(handle);
+  };
+
+  // Detaches the UI from any in-flight job without stopping it, so reopening the
+  // dialog for another track starts clean while the old download keeps going.
+  const closeDialog = () => {
+    attachedJobRef.current = null;
+    dialogRef.current?.close();
   };
 
   const openDialog = (track?: Track) => {
     const d = dialogRef.current;
     if (!d || d.open) return;
 
+    attachedJobRef.current = null;
     setTarget(track ?? null);
 
     const prefs = usePreferencesStore.getState();
@@ -166,7 +215,13 @@ export function DownloadDialog() {
   return (
     <dialog
       ref={dialogRef}
-      className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 shadow-2xl w-full max-w-md p-0 backdrop:bg-black/50 open:block"
+      // Tailwind's preflight zeroes every margin, which kills the `margin: auto`
+      // the UA stylesheet uses to centre a modal dialog — hence the explicit
+      // `fixed inset-0 m-auto h-fit`.
+      onClose={() => {
+        attachedJobRef.current = null;
+      }}
+      className="fixed inset-0 m-auto h-fit max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 shadow-2xl w-[calc(100%-2rem)] max-w-md p-0 backdrop:bg-black/50 open:block"
     >
       <div className="p-6 space-y-5">
         <div className="flex items-start justify-between">
@@ -177,7 +232,7 @@ export function DownloadDialog() {
             </p>
           </div>
           <button
-            onClick={() => dialogRef.current?.close()}
+            onClick={closeDialog}
             className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
             aria-label="Close"
           >
@@ -254,12 +309,16 @@ export function DownloadDialog() {
                 style={{ width: `${progress}%` }}
               />
             </div>
+            <p className="text-xs text-zinc-500 mt-2">
+              Closing this dialog keeps the download running — the file saves
+              itself when it's ready.
+            </p>
           </div>
         )}
 
         {state === "completed" && (
           <div className="text-sm text-green-600 dark:text-green-400 font-medium">
-            Download complete
+            Download complete — saving to your device
           </div>
         )}
         {state === "failed" && error && (
@@ -269,7 +328,7 @@ export function DownloadDialog() {
         <div className="flex gap-3 pt-2">
           {state === "completed" ? (
             <button
-              onClick={() => dialogRef.current?.close()}
+              onClick={closeDialog}
               className="flex-1 py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700"
             >
               Done
@@ -277,10 +336,10 @@ export function DownloadDialog() {
           ) : (
             <>
               <button
-                onClick={() => dialogRef.current?.close()}
+                onClick={closeDialog}
                 className="flex-1 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800"
               >
-                Cancel
+                {state === "downloading" ? "Close" : "Cancel"}
               </button>
               <button
                 onClick={startDownload}

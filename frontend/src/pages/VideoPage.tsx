@@ -4,9 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "../lib/api";
 import { formatCount, formatDuration, pickThumbnail } from "../lib/format";
 import { EmptyState, ErrorState, Spinner } from "../components/ui/States";
+import { useAuthStore } from "../stores/auth.store";
 
 export function VideoPage() {
   const { id } = useParams<{ id: string }>();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const playTrack = usePlayerStore((s) => s.playTrack);
   const addToQueue = usePlayerStore((s) => s.addToQueue);
@@ -88,12 +90,14 @@ export function VideoPage() {
             >
               Add to queue
             </button>
-            <button
-              onClick={() => globalThis.openDownloadDialog?.(video)}
-              className="px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            >
-              Download
-            </button>
+            {isAuthenticated && (
+              <button
+                onClick={() => globalThis.openDownloadDialog?.(video)}
+                className="px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                Download
+              </button>
+            )}
           </div>
         </div>
       </div>
