@@ -162,4 +162,8 @@ export class ProviderChain implements MediaProvider {
   getSuggestions(videoId: string): Promise<VideoSummary[]> {
     return this.run('getSuggestions', (provider) => provider.getSuggestions(videoId));
   }
+
+  getSearchSuggestions(query: string): Promise<string[]> {
+    return this.run('getSearchSuggestions', (provider) => provider.getSearchSuggestions(query));
+  }
 }

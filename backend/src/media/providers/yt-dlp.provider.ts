@@ -223,4 +223,11 @@ export class YtDlpProvider implements MediaProvider {
 
     return parseDto<typeof items>(items, items, 'ytdlp.getSuggestions');
   }
+
+  async getSearchSuggestions(_query: string): Promise<string[]> {
+    throw new ProviderException(
+      ErrorCode.UNSUPPORTED_OPERATION,
+      'yt-dlp does not support search suggestions',
+    );
+  }
 }

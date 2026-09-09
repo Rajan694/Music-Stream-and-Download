@@ -48,6 +48,10 @@ export const VideoSummarySchema = z.object({
 });
 export type VideoSummary = z.infer<typeof VideoSummarySchema>;
 
+/** What the player needs to start a track. Full Video hydrates in later. */
+export const TrackSchema = VideoSummarySchema;
+export type Track = z.infer<typeof TrackSchema>;
+
 export const VideoSchema = VideoSummarySchema.extend({
   description: z.string().optional(),
   likeCount: z.number().int().nonnegative().optional(),
@@ -79,6 +83,7 @@ export type Playlist = z.infer<typeof PlaylistSchema>;
 export const SearchVideoItemSchema = VideoSummarySchema.extend({
   type: z.literal("video"),
 });
+export type SearchVideoItem = z.infer<typeof SearchVideoItemSchema>;
 
 export const SearchPlaylistItemSchema = z.object({
   type: z.literal("playlist"),

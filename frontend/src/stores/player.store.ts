@@ -1,11 +1,14 @@
 import { create } from "zustand";
-import { Video } from "@music/shared";
+import { Track } from "@music/shared";
+import { apiClient } from "../lib/api";
 
 type RepeatMode = "off" | "all" | "one";
 
+let radioGen = 0;
+
 interface PlayerState {
-  currentTrack: Video | null;
-  queue: Video[];
+  currentTrack: Track | null;
+  queue: Track[];
   queueIndex: number;
   isPlaying: boolean;
   duration: number;
@@ -13,13 +16,17 @@ interface PlayerState {
   volume: number;
   isMuted: boolean;
   repeatMode: RepeatMode;
-  isShuffle: boolean;
+  autoplay: boolean;
+  isLoadingNext: boolean;
+  pendingSeek: number | null;
+  radioSeed: string | null;
 
-  playTrack: (track: Video, queueList?: Video[]) => void;
+  playTrack: (track: Track, queueList?: Track[]) => void;
   playNext: () => void;
+  next: () => Promise<void>;
   playPrevious: () => void;
-  addToQueue: (track: Video) => void;
-  playNextInQueue: (track: Video) => void;
+  addToQueue: (track: Track) => void;
+  playNextInQueue: (track: Track) => void;
   removeFromQueue: (index: number) => void;
   moveInQueue: (from: number, to: number) => void;
   playAt: (index: number) => void;
@@ -27,13 +34,15 @@ interface PlayerState {
   setPlaying: (playing: boolean) => void;
   setDuration: (duration: number) => void;
   setCurrentTime: (time: number) => void;
+  seekTo: (seconds: number) => void;
   setVolume: (volume: number) => void;
   toggleMute: () => void;
   toggleRepeat: () => void;
-  toggleShuffle: () => void;
+  toggleAutoplay: () => void;
+  hydrateTrack: (id: string, patch: Partial<Track>) => void;
 }
 
-export const usePlayerStore = create<PlayerState>((set) => ({
+export const usePlayerStore = create<PlayerState>((set, get) => ({
   currentTrack: null,
   queue: [],
   queueIndex: -1,
@@ -43,43 +52,95 @@ export const usePlayerStore = create<PlayerState>((set) => ({
   volume: 1.0,
   isMuted: false,
   repeatMode: "off",
-  isShuffle: false,
+  autoplay: true,
+  isLoadingNext: false,
+  pendingSeek: null,
+  radioSeed: null,
 
   playTrack: (track, queueList) => {
-    set((state) => {
-      const q = queueList || state.queue;
-      const index = q.findIndex((t) => t.id === track.id);
-      return {
+    if (queueList) {
+      const index = queueList.findIndex((t) => t.id === track.id);
+      set({
         currentTrack: track,
-        queue: q,
-        queueIndex: index >= 0 ? index : state.queueIndex,
+        queue: queueList,
+        queueIndex: index >= 0 ? index : 0,
         isPlaying: true,
-      };
+        currentTime: 0,
+        duration: 0,
+        radioSeed: null,
+      });
+      return;
+    }
+
+    const gen = ++radioGen;
+    set({
+      currentTrack: track,
+      queue: [track],
+      queueIndex: 0,
+      isPlaying: true,
+      radioSeed: track.id,
+      currentTime: 0,
+      duration: 0,
     });
+    void (async () => {
+      try {
+        const suggestions = await apiClient.getSuggestions(track.id);
+        if (gen !== radioGen) return;
+        set((st) => ({
+          queue: [
+            ...st.queue,
+            ...suggestions.filter((x) => x.id !== track.id),
+          ],
+        }));
+      } catch {
+        /* radio unavailable; manual queue still works */
+      }
+    })();
   },
 
-  playNext: () =>
-    set((state) => {
-      if (state.repeatMode === "one" && state.currentTrack) {
-        return { currentTime: 0, isPlaying: true };
-      }
-      if (state.queue.length === 0) return state;
+  playNext: () => {
+    get().next();
+  },
 
-      let nextIndex = state.queueIndex + 1;
-      if (nextIndex >= state.queue.length) {
-        if (state.repeatMode === "all") {
-          nextIndex = 0;
-        } else {
-          return { isPlaying: false, currentTrack: null, queueIndex: -1 };
-        }
-      }
+  next: async () => {
+    const s = get();
+    if (s.repeatMode === "one") {
+      set({ currentTime: 0, isPlaying: true });
+      return;
+    }
 
-      return {
-        currentTrack: state.queue[nextIndex],
-        queueIndex: nextIndex,
-        isPlaying: true,
-      };
-    }),
+    if (s.queueIndex + 1 < s.queue.length) {
+      get().playAt(s.queueIndex + 1);
+      return;
+    }
+    if (s.repeatMode === "all" && s.queue.length) {
+      get().playAt(0);
+      return;
+    }
+    if (!s.autoplay || !s.currentTrack) {
+      set({ isPlaying: false });
+      return;
+    }
+
+    set({ isLoadingNext: true });
+    const gen = ++radioGen;
+    try {
+      const more = await apiClient.getSuggestions(s.currentTrack.id);
+      if (gen !== radioGen) return;
+      const seen = new Set(get().queue.map((t) => t.id));
+      const fresh = more.filter((t) => !seen.has(t.id));
+      if (!fresh.length) {
+        set({ isPlaying: false });
+        return;
+      }
+      set((st) => ({ queue: [...st.queue, ...fresh] }));
+      get().playAt(get().queueIndex + 1);
+    } catch {
+      set({ isPlaying: false });
+    } finally {
+      set({ isLoadingNext: false });
+    }
+  },
 
   playPrevious: () =>
     set((state) => {
@@ -141,6 +202,8 @@ export const usePlayerStore = create<PlayerState>((set) => ({
         currentTrack: state.queue[index],
         queueIndex: index,
         isPlaying: true,
+        currentTime: 0,
+        duration: 0,
       };
     }),
 
@@ -151,17 +214,31 @@ export const usePlayerStore = create<PlayerState>((set) => ({
       queue.splice(index, 1);
 
       let queueIndex = state.queueIndex;
-      if (index < state.queueIndex) queueIndex--;
-      else if (index === state.queueIndex) queueIndex = -1;
+      if (index < state.queueIndex) {
+        queueIndex--;
+      } else if (index === state.queueIndex) {
+        if (queue.length === 0) {
+          return { queue, queueIndex: -1, currentTrack: null, isPlaying: false };
+        }
+        queueIndex = Math.min(queueIndex, queue.length - 1);
+        return {
+          queue,
+          queueIndex,
+          currentTrack: queue[queueIndex],
+          isPlaying: true,
+        };
+      }
 
       return { queue, queueIndex };
     }),
 
-  clearQueue: () => set({ queue: [], queueIndex: -1 }),
+  clearQueue: () =>
+    set({ queue: [], queueIndex: -1, currentTrack: null, isPlaying: false }),
 
   setPlaying: (playing) => set({ isPlaying: playing }),
   setDuration: (duration) => set({ duration }),
   setCurrentTime: (time) => set({ currentTime: time }),
+  seekTo: (seconds) => set({ pendingSeek: seconds, currentTime: seconds }),
   setVolume: (volume) => set({ volume }),
   toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
 
@@ -175,5 +252,17 @@ export const usePlayerStore = create<PlayerState>((set) => ({
       return { repeatMode: map[state.repeatMode] };
     }),
 
-  toggleShuffle: () => set((state) => ({ isShuffle: !state.isShuffle })),
+  toggleAutoplay: () => set((state) => ({ autoplay: !state.autoplay })),
+
+  hydrateTrack: (id, patch) =>
+    set((state) => {
+      const update = (t: Track) =>
+        t.id === id ? { ...t, ...patch } : t;
+      return {
+        currentTrack: state.currentTrack?.id === id
+          ? update(state.currentTrack)
+          : state.currentTrack,
+        queue: state.queue.map(update),
+      };
+    }),
 }));

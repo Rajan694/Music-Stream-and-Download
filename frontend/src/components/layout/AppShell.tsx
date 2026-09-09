@@ -4,6 +4,7 @@ import { usePlayerStore } from "../../stores/player.store";
 const NAV = [
   { href: "/search", label: "Search" },
   { href: "/queue", label: "Queue" },
+  { href: "/downloads", label: "Downloads" },
   { href: "/profile", label: "Profile" },
 ];
 

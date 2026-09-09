@@ -191,6 +191,8 @@ export const apiClient = {
     fetchApi(`/media/videos/${id}/suggestions`, {
       schema: z.array(VideoSummarySchema),
     }),
+  getSearchSuggestions: (q: string) =>
+    fetchApi<string[]>(`/media/suggestions?q=${encodeURIComponent(q)}`),
 
   refresh: async () => ({ accessToken: await refreshAccessToken() }),
   me: () =>
@@ -271,19 +273,7 @@ export const apiClient = {
   getDownload: (id: string) =>
     fetchApi<DownloadJobRecord>(`/downloads/${id}`, { authed: true }),
   listDownloads: () =>
-    fetchApi<
-      Array<{
-        id: string;
-        videoId: string;
-        title: string;
-        format: string;
-        quality: string;
-        state: string;
-        progress: number;
-        fileSize: number | null;
-        createdAt: string;
-      }>
-    >("/downloads", { authed: true }),
+    fetchApi<DownloadJobRecord[]>("/downloads", { authed: true }),
   estimatePlaylistDownload: (
     playlistId: string,
     format: string,

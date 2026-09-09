@@ -6,4 +6,5 @@ export interface MediaProvider {
   getVideo(id: string): Promise<Video>;
   getPlaylist(id: string): Promise<Playlist>;
   getSuggestions(videoId: string): Promise<VideoSummary[]>;
+  getSearchSuggestions(query: string): Promise<string[]>;
 }

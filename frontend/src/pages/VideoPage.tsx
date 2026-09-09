@@ -39,12 +39,13 @@ export function VideoPage() {
       />
     );
   }
-  if (!video) return (
-    <EmptyState
-      title="Video not found"
-      action={{ href: "/search", label: "Back to search" }}
-    />
-  );
+  if (!video)
+    return (
+      <EmptyState
+        title="Video not found"
+        action={{ href: "/search", label: "Back to search" }}
+      />
+    );
 
   const thumbnail = pickThumbnail(video.thumbnails);
 
@@ -70,7 +71,7 @@ export function VideoPage() {
 
           <div className="flex flex-wrap gap-2 pt-2">
             <button
-              onClick={() => playTrack(video, [video])}
+              onClick={() => playTrack(video)}
               className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
             >
               Play
@@ -113,10 +114,11 @@ export function VideoPage() {
           <h2 className="text-lg font-semibold">Up next</h2>
           <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
             {suggestions.map((item) => (
-              <li key={item.id}>
-                <Link
-                  to={`/video/${item.id}`}
-                  className="flex items-center gap-3 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 rounded-lg px-2 -mx-2"
+              <li key={item.id} className="flex items-center gap-3 py-3">
+                <button
+                  onClick={() => playTrack(item)}
+                  className="flex-1 min-w-0 text-left flex items-center gap-3 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 rounded-lg px-2 -mx-2 py-1"
+                  title="Play now"
                 >
                   {pickThumbnail(item.thumbnails) && (
                     <img
@@ -133,7 +135,28 @@ export function VideoPage() {
                       {item.uploaderName} · {formatDuration(item.duration)}
                     </p>
                   </div>
-                </Link>
+                </button>
+
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => playNextInQueue(item)}
+                    className="px-2 py-1 rounded text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  >
+                    Play next
+                  </button>
+                  <button
+                    onClick={() => addToQueue(item)}
+                    className="px-2 py-1 rounded text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  >
+                    Add to queue
+                  </button>
+                  <Link
+                    to={`/video/${item.id}`}
+                    className="px-2 py-1 rounded text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  >
+                    Details
+                  </Link>
+                </div>
               </li>
             ))}
           </ul>

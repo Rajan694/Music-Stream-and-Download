@@ -55,6 +55,28 @@ export function createMediaRouter(container: Container) {
     } catch (e) { next(e); }
   });
 
+  router.get('/suggestions', async (req, res) => {
+    try {
+      const q = (req.query.q as string ?? '').trim();
+      if (!q) {
+        res.json([]);
+        return;
+      }
+      if (q.length > MAX_QUERY_LENGTH) {
+        res.json([]);
+        return;
+      }
+      const suggestions = await cache.wrap(
+        `suggest:${q.toLowerCase()}`,
+        container.env.CACHE_SEARCH_TTL_MS,
+        () => providers.getSearchSuggestions(q),
+      );
+      res.json(suggestions);
+    } catch {
+      res.json([]);
+    }
+  });
+
   router.get('/playlists/:id', async (req, res, next) => {
     try {
       const playlistId = parser.assertPlaylistId(req.params.id);

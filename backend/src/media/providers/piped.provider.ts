@@ -200,4 +200,8 @@ export class PipedProvider implements MediaProvider {
     const video = await this.getVideo(videoId);
     return video.relatedVideos;
   }
+
+  async getSearchSuggestions(query: string): Promise<string[]> {
+    return this.request<string[]>('/suggestions?query=' + encodeURIComponent(query));
+  }
 }

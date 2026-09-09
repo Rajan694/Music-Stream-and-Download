@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { MdClose } from "react-icons/md";
-import type { Video } from "@music/shared";
+import type { Track } from "@music/shared";
 import { usePlayerStore } from "../../stores/player.store";
 import { useAuthStore } from "../../stores/auth.store";
 import { usePreferencesStore } from "../../stores/preferences.store";
 import { apiClient } from "../../lib/api";
 
 declare global {
-  var openDownloadDialog: ((track?: Video) => void) | undefined;
+  var openDownloadDialog: ((track?: Track) => void) | undefined;
 }
 
 const FORMATS = ["mp3", "webm", "ogg"] as const;
@@ -23,7 +23,7 @@ function formatBytes(bytes: number | null): string {
 export function DownloadDialog() {
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   const playingTrack = usePlayerStore((s) => s.currentTrack);
-  const [target, setTarget] = useState<Video | null>(null);
+  const [target, setTarget] = useState<Track | null>(null);
   const currentTrack = target ?? playingTrack;
 
   const defaultFormat = usePreferencesStore((s) => s.defaultFormat);
@@ -42,7 +42,7 @@ export function DownloadDialog() {
   >("idle");
   const [error, setError] = useState("");
 
-  const estimateSize = async (track: Video | null = currentTrack) => {
+  const estimateSize = async (track: Track | null = currentTrack) => {
     if (!track) return;
     setState("estimating");
     try {
@@ -132,7 +132,7 @@ export function DownloadDialog() {
     }, 2000);
   };
 
-  const openDialog = (track?: Video) => {
+  const openDialog = (track?: Track) => {
     const d = dialogRef.current;
     if (!d || d.open) return;
 
@@ -156,7 +156,7 @@ export function DownloadDialog() {
   });
 
   useEffect(() => {
-    globalThis.openDownloadDialog = (track?: Video) =>
+    globalThis.openDownloadDialog = (track?: Track) =>
       openDialogRef.current(track);
     return () => {
       globalThis.openDownloadDialog = undefined;

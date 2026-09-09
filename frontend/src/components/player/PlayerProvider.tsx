@@ -1,33 +1,28 @@
 import { useEffect, useRef } from "react";
 import { usePlayerStore } from "../../stores/player.store";
 import { usePreferencesStore } from "../../stores/preferences.store";
-import { apiClient } from "../../lib/api";
 import { recordGuestSong } from "../../lib/history";
 
 export function PlayerProvider() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const fetchedSuggestionsRef = useRef<string | null>(null);
   const prefetchedStreamRef = useRef<string | null>(null);
   const streamQuality = usePreferencesStore((s) => s.streamQuality);
 
   const {
     currentTrack,
     isPlaying,
-    currentTime,
-    duration,
     volume,
     isMuted,
     repeatMode,
-    queue,
-    queueIndex,
+    pendingSeek,
     playNext,
     setCurrentTime,
     setDuration,
     setPlaying,
-    addToQueue,
   } = usePlayerStore();
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api/v1";
+  const API_URL =
+    import.meta.env.VITE_API_URL || "http://localhost:4000/api/v1";
 
   useEffect(() => {
     if (currentTrack) {
@@ -70,68 +65,43 @@ export function PlayerProvider() {
     };
   }, [playNext, setCurrentTime, setDuration, setPlaying]);
 
+  // Pending seek
   useEffect(() => {
-    if (
-      currentTrack &&
-      duration > 0 &&
-      currentTime > Math.max(0, duration - 30) &&
-      fetchedSuggestionsRef.current !== currentTrack.id
-    ) {
-      if (queueIndex >= queue.length - 1 && repeatMode !== "one") {
-        fetchedSuggestionsRef.current = currentTrack.id;
-        (async () => {
-          try {
-            const suggestions = await apiClient.getSuggestions(currentTrack.id);
-            if (suggestions && suggestions.length > 0) {
-              const video = await apiClient.getVideo(suggestions[0].id);
-              addToQueue(video);
-            }
-          } catch (e) {
-            console.error(e);
-          }
-        })();
-      }
-    }
-  }, [
-    currentTime,
-    duration,
-    currentTrack,
-    queue.length,
-    queueIndex,
-    repeatMode,
-    addToQueue,
-  ]);
+    const audio = audioRef.current;
+    if (!audio || pendingSeek == null) return;
+    const total = Number.isFinite(audio.duration)
+      ? audio.duration
+      : currentTrack?.duration ?? 0;
+    if (total > 0)
+      audio.currentTime = Math.min(Math.max(0, pendingSeek), total);
+    usePlayerStore.setState({ pendingSeek: null });
+  }, [pendingSeek, currentTrack]);
 
+  // Prefetch next track stream
   useEffect(() => {
     if (repeatMode === "one") return;
 
+    const { queue, queueIndex } = usePlayerStore.getState();
     const next = queue[queueIndex + 1];
     if (!next) return;
     if (prefetchedStreamRef.current === next.id + ":" + streamQuality) return;
     prefetchedStreamRef.current = next.id + ":" + streamQuality;
 
-    void fetch(`${API_URL}/media/videos/${next.id}/stream?quality=${streamQuality}`, {
-      headers: { Range: "bytes=0-1" },
-      cache: "no-store",
-    }).catch(() => {
+    void fetch(
+      `${API_URL}/media/videos/${next.id}/stream?quality=${streamQuality}`,
+      { headers: { Range: "bytes=0-1" }, cache: "no-store" },
+    ).catch(() => {
       prefetchedStreamRef.current = null;
     });
-  }, [queue, queueIndex, repeatMode, streamQuality, API_URL]);
+  }, [repeatMode, streamQuality, API_URL]);
 
-  // Swapping the audio source is driven by the track and the quality only.
-  // Playback position and play/pause state are read straight from the store
-  // instead of being closed over: `currentTime` ticks on every timeupdate, so
-  // depending on it would rebuild `audio.src` several times a second.
+  // Swap audio source
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
 
-    const { currentTime: position, isPlaying: playing } =
+    const { isPlaying: playing } =
       usePlayerStore.getState();
-
-    if (fetchedSuggestionsRef.current !== currentTrack.id && position < 5) {
-      fetchedSuggestionsRef.current = null;
-    }
 
     const targetSrc = `${API_URL}/media/videos/${currentTrack.id}/stream?quality=${streamQuality}`;
 

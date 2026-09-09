@@ -8,6 +8,7 @@ import {
   MdSkipNext,
   MdSkipPrevious,
 } from "react-icons/md";
+import { SeekBar } from "./SeekBar";
 
 function formatTime(seconds: number) {
   if (!seconds || isNaN(seconds)) return "0:00";
@@ -30,15 +31,10 @@ export function GlobalMiniPlayer() {
 
   if (!currentTrack || pathname === "/player") return null;
 
-  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
-
   return (
     <div className="mini-player fixed bottom-16 lg:bottom-0 left-0 right-0 z-50 flex flex-col bg-zinc-100 dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 shadow-[0_-4px_24px_rgba(0,0,0,0.1)]">
-      <div className="h-1 bg-zinc-200 dark:bg-zinc-800 w-full cursor-pointer relative group">
-        <div
-          className="absolute inset-y-0 left-0 bg-blue-500 group-hover:bg-blue-400 transition-colors"
-          style={{ width: `${progress}%` }}
-        />
+      <div className="px-4 pt-1">
+        <SeekBar variant="mini" />
       </div>
 
       <div className="flex items-center justify-between px-4 h-16 max-w-7xl mx-auto w-full">

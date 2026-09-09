@@ -9,10 +9,10 @@ import {
   MdQueueMusic,
   MdRepeat,
   MdRepeatOne,
-  MdShuffle,
   MdSkipNext,
   MdSkipPrevious,
 } from "react-icons/md";
+import { SeekBar } from "../components/player/SeekBar";
 
 function formatTime(seconds: number) {
   if (!seconds || isNaN(seconds)) return "0:00";
@@ -30,11 +30,10 @@ export function PlayerPage() {
     currentTime,
     duration,
     repeatMode,
-    isShuffle,
+    isLoadingNext,
     playNext,
     playPrevious,
     toggleRepeat,
-    toggleShuffle,
     setPlaying,
     removeFromQueue,
     clearQueue,
@@ -55,8 +54,6 @@ export function PlayerPage() {
       </div>
     );
   }
-
-  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
     <div className="max-w-3xl mx-auto h-[calc(100vh-100px)] flex flex-col justify-center pb-20">
@@ -85,49 +82,9 @@ export function PlayerPage() {
           <span>{formatTime(duration || currentTrack.duration)}</span>
         </div>
 
-        <div className="h-1.5 w-full bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden cursor-pointer">
-          <div
-            className="h-full bg-blue-500 rounded-full"
-            style={{ width: `${progress}%` }}
-          ></div>
-        </div>
+        <SeekBar />
 
-        <div className="flex items-center justify-between mt-8">
-          <button
-            onClick={toggleShuffle}
-            className={`p-2 transition-colors ${isShuffle ? "text-blue-500" : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"}`}
-          >
-            <MdShuffle className="w-5 h-5" />
-          </button>
-
-          <div className="flex items-center gap-6">
-            <button
-              onClick={playPrevious}
-              className="p-3 text-zinc-600 hover:text-black dark:text-zinc-300 dark:hover:text-white transition-transform hover:scale-110"
-            >
-              <MdSkipPrevious className="w-8 h-8" />
-            </button>
-
-            <button
-              title="Play"
-              onClick={() => setPlaying(!isPlaying)}
-              className="p-4 bg-black text-white dark:bg-white dark:text-black rounded-full hover:scale-105 transition-transform flex items-center justify-center shadow-lg"
-            >
-              {isPlaying ? (
-                <MdPause className="w-8 h-8" />
-              ) : (
-                <MdPlayArrow className="w-8 h-8 translate-x-1" />
-              )}
-            </button>
-
-            <button
-              onClick={playNext}
-              className="p-3 text-zinc-600 hover:text-black dark:text-zinc-300 dark:hover:text-white transition-transform hover:scale-110"
-            >
-              <MdSkipNext className="w-8 h-8" />
-            </button>
-          </div>
-
+        <div className="flex items-center justify-center gap-8 mt-8">
           <button
             onClick={toggleRepeat}
             className={`p-2 transition-colors ${repeatMode !== "off" ? "text-blue-500" : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"}`}
@@ -138,6 +95,39 @@ export function PlayerPage() {
               <MdRepeat className="w-5 h-5" />
             )}
           </button>
+
+          <button
+            onClick={playPrevious}
+            className="p-3 text-zinc-600 hover:text-black dark:text-zinc-300 dark:hover:text-white transition-transform hover:scale-110"
+          >
+            <MdSkipPrevious className="w-8 h-8" />
+          </button>
+
+          <button
+            title="Play"
+            onClick={() => setPlaying(!isPlaying)}
+            className="p-4 bg-black text-white dark:bg-white dark:text-black rounded-full hover:scale-105 transition-transform flex items-center justify-center shadow-lg"
+          >
+            {isPlaying ? (
+              <MdPause className="w-8 h-8" />
+            ) : (
+              <MdPlayArrow className="w-8 h-8 translate-x-1" />
+            )}
+          </button>
+
+          <button
+            onClick={playNext}
+            disabled={isLoadingNext}
+            className="p-3 text-zinc-600 hover:text-black dark:text-zinc-300 dark:hover:text-white transition-transform hover:scale-110 disabled:opacity-50"
+          >
+            {isLoadingNext ? (
+              <div className="w-8 h-8 border-2 border-zinc-400 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <MdSkipNext className="w-8 h-8" />
+            )}
+          </button>
+
+          <span className="w-[36px]" />
         </div>
 
         <div className="mt-8 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center">

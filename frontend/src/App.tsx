@@ -4,6 +4,7 @@ import { ProfileLayout } from "./layouts/ProfileLayout";
 import { SearchPage } from "./pages/SearchPage";
 import { PlayerPage } from "./pages/PlayerPage";
 import { QueuePage } from "./pages/QueuePage";
+import { DownloadsPage } from "./pages/DownloadsPage";
 import { VideoPage } from "./pages/VideoPage";
 import { PlaylistPage } from "./pages/PlaylistPage";
 import { ProfilePage } from "./pages/ProfilePage";
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="/search" element={<SearchPage />} />
         <Route path="/player" element={<PlayerPage />} />
         <Route path="/queue" element={<QueuePage />} />
+        <Route path="/downloads" element={<DownloadsPage />} />
         <Route path="/video/:id" element={<VideoPage />} />
         <Route path="/playlist/:id" element={<PlaylistPage />} />
         <Route path="/profile" element={<ProfileLayout />}>
