@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router";
 import { usePlayerStore } from "../../stores/player.store";
+import { useUIStore } from "../../stores/ui.store";
 
 const NAV = [
   { href: "/search", label: "Search" },
@@ -11,9 +12,12 @@ const NAV = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const queueCount = usePlayerStore((s) => s.queue.length);
+  const lastSearchQuery = useUIStore((s) => s.lastSearchQuery);
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
+
+  const searchHref = lastSearchQuery ? `/search?q=${encodeURIComponent(lastSearchQuery)}` : '/search';
 
   return (
     <div className="flex h-screen flex-col lg:flex-row overflow-hidden bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50 transition-colors">
@@ -29,7 +33,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {NAV.map((item) => (
             <Link
               key={item.href}
-              to={item.href}
+              to={item.href === '/search' ? searchHref : item.href}
               aria-current={isActive(item.href) ? "page" : undefined}
               className={`flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                 isActive(item.href)
@@ -56,7 +60,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {NAV.map((item) => (
           <Link
             key={item.href}
-            to={item.href}
+            to={item.href === '/search' ? searchHref : item.href}
             aria-current={isActive(item.href) ? "page" : undefined}
             className={`flex-1 flex items-center justify-center font-medium text-xs ${
               isActive(item.href) ? "text-blue-600 dark:text-blue-400" : ""

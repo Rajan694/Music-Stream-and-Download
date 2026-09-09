@@ -1,8 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { ImSpinner8 } from 'react-icons/im';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { SearchVideoItem } from '@music/shared';
+import { useUIStore } from '../stores/ui.store';
 import { apiClient } from '../lib/api';
 import { formatDuration } from '../lib/format';
 import { useDebounced } from '../lib/useDebounced';
@@ -15,10 +16,19 @@ export function SearchPage() {
   const [isFocused, setIsFocused] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const lastSearchQuery = useUIStore((s) => s.lastSearchQuery);
+  const setLastSearchQuery = useUIStore((s) => s.setLastSearchQuery);
 
   const playTrack = usePlayerStore((s) => s.playTrack);
   const playNextInQueue = usePlayerStore((s) => s.playNextInQueue);
   const addToQueue = usePlayerStore((s) => s.addToQueue);
+
+  // Restore last query when navigating to bare /search
+  useEffect(() => {
+    if (!q && lastSearchQuery) {
+      setParams({ q: lastSearchQuery }, { replace: true });
+    }
+  }, [q, lastSearchQuery, setParams]);
 
   const fastQ = useDebounced(q, 400);
   const showSuggestions = isFocused && fastQ.trim().length >= 2;
@@ -52,6 +62,7 @@ export function SearchPage() {
   const setQ = (value: string) => {
     if (value.trim()) {
       setParams({ q: value }, { replace: true });
+      setLastSearchQuery(value.trim());
     } else {
       setParams({}, { replace: true });
     }
