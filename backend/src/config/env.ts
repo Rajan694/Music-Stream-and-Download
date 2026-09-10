@@ -95,6 +95,11 @@ const EnvSchema = z.object({
 
   JWT_ACCESS_SECRET: z.string().min(32).optional(),
   JWT_REFRESH_SECRET: z.string().min(32).optional(),
+  // Separate from the JWT secrets on purpose: a stream ticket is a different
+  // trust domain, and reusing the access-token key means one rotation
+  // invalidates both.
+  STREAM_TICKET_SECRET: z.string().min(32).optional(),
+  STREAM_TICKET_TTL_SEC: z.coerce.number().int().positive().default(120),
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('30d'),
   COOKIE_DOMAIN: z.string().default('localhost'),
@@ -110,12 +115,13 @@ const EnvSchema = z.object({
 
 export type Env = Omit<
   z.infer<typeof EnvSchema>,
-  'JWT_ACCESS_SECRET' | 'JWT_REFRESH_SECRET'
+  'JWT_ACCESS_SECRET' | 'JWT_REFRESH_SECRET' | 'STREAM_TICKET_SECRET'
 > & {
   corsOrigins: string[];
   pipedFallbackUrls: string[];
   JWT_ACCESS_SECRET: string;
   JWT_REFRESH_SECRET: string;
+  STREAM_TICKET_SECRET: string;
 };
 
 function requireSecret(
@@ -162,6 +168,11 @@ export function loadEnv(): Env {
     JWT_REFRESH_SECRET: requireSecret(
       parsed.data.JWT_REFRESH_SECRET,
       'JWT_REFRESH_SECRET',
+      isProduction,
+    ),
+    STREAM_TICKET_SECRET: requireSecret(
+      parsed.data.STREAM_TICKET_SECRET,
+      'STREAM_TICKET_SECRET',
       isProduction,
     ),
   };

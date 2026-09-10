@@ -1,15 +1,5 @@
 import { defineConfig, globalIgnores } from 'eslint/config';
-import reactHooks from 'eslint-plugin-react-hooks';
-import reactRefresh from 'eslint-plugin-react-refresh';
 import { allowAnyIn, baseConfig } from '@music/config/eslint/base';
-
-const FRONTEND = ['frontend/**/*.{ts,tsx,js,jsx,mjs}'];
-
-const scopeTo = (files, configs) =>
-  configs.map((config) => ({
-    ...config,
-    files: config.files ?? files,
-  }));
 
 export default defineConfig([
   globalIgnores([
@@ -20,6 +10,7 @@ export default defineConfig([
     '**/coverage/**',
     '**/src/generated/**',
     '**/*.tsbuildinfo',
+    'frontend/web/**',
   ]),
 
   ...baseConfig,
@@ -34,9 +25,4 @@ export default defineConfig([
 
   allowAnyIn(['backend/src/media/providers/**/*.ts']),
   allowAnyIn(['worker/src/pipeline/**/*.ts']),
-
-  ...scopeTo(FRONTEND, [
-    { plugins: { 'react-hooks': reactHooks, 'react-refresh': reactRefresh } },
-    { rules: { ...reactHooks.configs.recommended.rules, 'react-refresh/only-export-components': 'warn' } },
-  ]),
 ]);

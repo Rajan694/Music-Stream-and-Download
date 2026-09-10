@@ -1,13 +1,48 @@
 import { Router } from 'express';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { AudioQuality, ErrorCode } from '@music/shared';
 import { Container } from '../container.js';
 import { ProviderException } from '../errors/provider.exception.js';
+import { HttpError } from '../lib/http-error.js';
 
 const MAX_QUERY_LENGTH = 200;
 
 export function createMediaRouter(container: Container) {
   const { providers, parser, cache, stream } = container;
   const router = Router();
+
+  function signTicket(videoId: string, exp: number): string {
+    return createHmac('sha256', container.env.STREAM_TICKET_SECRET)
+      .update(`${videoId}:${exp}`)
+      .digest('hex');
+  }
+
+  function mintTicket(videoId: string): string {
+    const exp = Math.floor(Date.now() / 1000) + container.env.STREAM_TICKET_TTL_SEC;
+    return `${exp}.${signTicket(videoId, exp)}`;
+  }
+
+  function verifyTicket(videoId: string, ticket: string): boolean {
+    const [expStr, sig] = ticket.split('.');
+    if (!expStr || !sig) return false;
+    const exp = Number.parseInt(expStr, 10);
+    if (!Number.isFinite(exp) || Math.floor(Date.now() / 1000) > exp) return false;
+
+    // Constant-time compare: `===` on a hex digest leaks how many leading
+    // bytes matched, which is enough to forge a signature byte by byte.
+    const presented = Buffer.from(sig, 'hex');
+    const expected = Buffer.from(signTicket(videoId, exp), 'hex');
+    if (presented.length !== expected.length) return false;
+    return timingSafeEqual(presented, expected);
+  }
+
+  router.post('/videos/:id/ticket', (req, res, next) => {
+    try {
+      const videoId = parser.assertVideoId(req.params.id);
+      const ticket = mintTicket(videoId);
+      res.json({ ticket });
+    } catch (e) { next(e); }
+  });
 
   router.get('/search', async (req, res, next) => {
     try {
@@ -92,6 +127,16 @@ export function createMediaRouter(container: Container) {
   router.get('/videos/:id/stream', async (req, res, next) => {
     try {
       const videoId = parser.assertVideoId(req.params.id);
+      // Mandatory, not best-effort: an `if (ticket && ...)` check is bypassed
+      // by simply omitting the param, which is the whole attack.
+      const ticket = (req.query.sig ?? req.query.ticket) as string | undefined;
+      if (!ticket || !verifyTicket(videoId, ticket)) {
+        throw new HttpError(
+          401,
+          ErrorCode.UNAUTHORIZED,
+          'A valid stream ticket is required. Mint one at POST /media/videos/:id/ticket',
+        );
+      }
       const parsed = AudioQuality.safeParse(req.query.quality ?? 'high');
       if (!parsed.success) {
         throw new ProviderException(ErrorCode.QUALITY_UNAVAILABLE, 'quality must be low, medium or high');

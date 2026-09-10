@@ -13,10 +13,16 @@ datasource db {
 
 // ─── Users ────────────────────────────────────────────────────────────────────
 
+enum Role {
+  USER
+  ADMIN
+}
+
 model User {
   id           String    @id @default(cuid())
   email        String    @unique
   passwordHash String?   // null on legacy accounts that never set a password
+  role         Role      @default(USER)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -25,6 +31,7 @@ model User {
   history      RecentSong[]
   pinnedPlaylists PinnedPlaylist[]
   downloadJobs DownloadJob[]
+  playEvents   PlayEvent[]
 
   @@index([email])
 }
@@ -72,6 +79,29 @@ model RecentSong {
 
   @@unique([userId, videoId])
   @@index([userId, playedAt(sort: Desc)])
+}
+
+// ─── Play Events (Analytics) ─────────────────────────────────────────────────
+
+model PlayEvent {
+  id             String   @id  // client UUID v4 for idempotency
+  userId         String
+  videoId        String
+  title          String
+  uploaderName   String
+  durationSec    Int
+  msPlayed       Int
+  completed      Boolean  @default(false)
+  source         String   // stream | local
+  clientPlatform String   // android | web | windows
+  playedAt       DateTime
+  createdAt      DateTime @default(now())
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([playedAt])
+  @@index([userId, playedAt])
+  @@index([videoId, playedAt])
 }
 
 // ─── Playlists ────────────────────────────────────────────────────────────────

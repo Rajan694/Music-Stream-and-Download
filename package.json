@@ -2,7 +2,6 @@
   "name": "music-stream",
   "private": true,
   "workspaces": [
-    "frontend",
     "backend",
     "worker",
     "packages/*"
@@ -14,14 +13,13 @@
   "scripts": {
     "setup": "npm install --no-engine-strict && npm run db:generate && npm run build -w packages/shared && npm run build -w packages/db",
     "predev": "npm run build -w packages/shared && npm run build -w packages/db",
-    "dev": "concurrently -n shared,db,backend,worker,frontend -c blue,magenta,green,yellow,cyan \"npm:dev:shared\" \"npm:dev:db\" \"npm:dev:backend\" \"npm:dev:worker\" \"npm:dev:frontend\"",
+    "dev": "concurrently -n shared,db,backend,worker -c blue,magenta,green,yellow \"npm:dev:shared\" \"npm:dev:db\" \"npm:dev:backend\" \"npm:dev:worker\"",
     "dev:shared": "npm run build -w packages/shared -- --watch --preserveWatchOutput",
     "dev:db": "npm run build -w packages/db -- --watch --preserveWatchOutput",
     "dev:backend": "npm run dev -w backend",
     "dev:worker": "npm run dev -w worker",
-    "dev:frontend": "npm run dev -w frontend",
-    "build": "tsc -b && npm run build -w frontend",
-    "typecheck": "tsc -b && npm run typecheck -w frontend",
+    "build": "tsc -b",
+    "typecheck": "tsc -b",
     "lint": "eslint .",
     "infra:up": "docker compose up -d postgres redis piped-db piped-bg-helper piped-backend piped-proxy",
     "infra:down": "docker compose down",

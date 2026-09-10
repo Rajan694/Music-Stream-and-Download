@@ -1,0 +1,102 @@
+name: music_stream
+description: "Cross-platform music streaming with offline support."
+publish_to: 'none'
+
+version: 0.0.1+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # DI + State
+  # riverpod_generator is codegen and belongs in dev_dependencies; it was here
+  # but nothing in lib/ uses @riverpod annotations, so it is dropped entirely.
+  flutter_riverpod: ^2.4.0
+
+  # Routing
+  # go_router_builder likewise: dev-only, and unused (routes are hand-written).
+  go_router: ^14.0.0
+
+  # HTTP
+  dio: ^5.3.0
+
+  # Audio
+  # VERIFY THIS PAIR FIRST at `flutter pub get`: just_audio_media_kit provides
+  # the federated Windows backend and trails just_audio's releases, so these
+  # two constraints must be resolved together and then pinned exactly. A
+  # floating minor bump breaks Windows playback with no local signal.
+  just_audio: ^0.9.32
+  just_audio_media_kit: ^0.1.0
+  media_kit_libs_windows_audio: ^1.0.0
+  
+  # Audio service & media controls
+  audio_service: ^0.18.18
+  smtc_windows: ^0.1.0
+  audio_session: ^0.1.16
+  
+  # Local DB
+  drift: ^2.14.0
+  sqlite3_flutter_libs: ^0.5.0
+  
+  # Secure storage
+  flutter_secure_storage: ^9.0.0
+  
+  # File I/O
+  path_provider: ^2.1.0
+  file_picker: ^6.0.0
+  media_store_plus: ^4.0.0
+  background_downloader: ^8.1.0
+  
+  # Connectivity
+  connectivity_plus: ^5.0.0
+  
+  # UI
+  fluent_ui: ^4.8.0
+  flutter_acrylic: ^1.2.0
+  window_manager: ^0.3.0
+  fl_chart: ^0.63.0
+  
+  # Models
+  freezed_annotation: ^2.4.0
+  json_annotation: ^4.8.0
+  
+  # Motion
+  animations: ^2.0.0
+  flutter_animate: ^4.2.0
+  
+  # Logging
+  logger: ^2.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.0
+  freezed: ^2.4.0
+  json_serializable: ^6.7.0
+  drift_dev: ^2.14.0
+
+flutter:
+  uses-material-design: true
+  
+  # Re-enable once the four Inter TTFs are in assets/fonts/ (see the README
+  # there). Declaring assets that do not exist fails `flutter build` before it
+  # compiles a single line of Dart, so these stay commented until the files land.
+  # assets:
+  #   - assets/fonts/
+  #
+  # fonts:
+  #   - family: Inter
+  #     fonts:
+  #       - asset: assets/fonts/Inter-Regular.ttf
+  #         weight: 400
+  #       - asset: assets/fonts/Inter-Medium.ttf
+  #         weight: 500
+  #       - asset: assets/fonts/Inter-SemiBold.ttf
+  #         weight: 600
+  #       - asset: assets/fonts/Inter-Bold.ttf
+  #         weight: 700

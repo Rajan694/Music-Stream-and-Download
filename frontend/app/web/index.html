@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp">
+  <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin">
+  <title>Music Stream</title>
+  <style>
+    body { margin: 0; background: #070709; }
+    #splash {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #070709 0%, #0F0F14 100%);
+    }
+    #splash.hidden { display: none; }
+    .loader {
+      width: 48px; height: 48px;
+      border: 3px solid #22222C;
+      border-top-color: #8B5CF6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div id="splash">
+    <div class="loader"></div>
+  </div>
+  <script src="flutter.js"></script>
+  <script>
+    window.addEventListener('load', function(ev) {
+      _flutter.loader.loadEntrypoint({
+        serviceWorker: { serviceWorkerVersion: serviceWorkerVersion },
+        onEntrypointLoaded: function(engineInitializer) {
+          engineInitializer.initializeEngine().then(function(appRunner) {
+            document.getElementById('splash').classList.add('hidden');
+            appRunner.runApp();
+          });
+        }
+      });
+    });
+  </script>
+</body>
+</html>

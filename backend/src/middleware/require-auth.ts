@@ -64,7 +64,7 @@ export function createRequireAuth(prisma: PrismaClient) {
 
     const user = await prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, email: true, createdAt: true },
+      select: { id: true, email: true, role: true, createdAt: true },
     });
 
     // A deleted account must not keep working until its token expires.

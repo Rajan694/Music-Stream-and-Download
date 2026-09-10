@@ -25,45 +25,73 @@ export function createAuthRouter(container: Container) {
   router.post('/register', validate({ body: RegisterSchema }), async (req, res, next) => {
     try {
       const { email, password } = req.body;
+      const isNative = req.headers['x-client'] === 'native';
       const { user, accessToken, refreshToken } = await auth.register(email, password);
-      res.cookie(REFRESH_COOKIE, refreshToken, { ...cookieOptions(), maxAge: 30 * 24 * 60 * 60 * 1000 });
-      res.status(201).json({ user, accessToken });
+      
+      if (isNative) {
+        res.status(201).json({ user, accessToken, refreshToken });
+      } else {
+        res.cookie(REFRESH_COOKIE, refreshToken, { ...cookieOptions(), maxAge: 30 * 24 * 60 * 60 * 1000 });
+        res.status(201).json({ user, accessToken });
+      }
     } catch (e) { next(e); }
   });
 
   router.post('/login', validate({ body: LoginSchema }), async (req, res, next) => {
     try {
       const { email, password } = req.body;
+      const isNative = req.headers['x-client'] === 'native';
       const { user, accessToken, refreshToken } = await auth.login(email, password);
-      res.cookie(REFRESH_COOKIE, refreshToken, { ...cookieOptions(), maxAge: 30 * 24 * 60 * 60 * 1000 });
-      res.json({ user, accessToken });
+      
+      if (isNative) {
+        res.json({ user, accessToken, refreshToken });
+      } else {
+        res.cookie(REFRESH_COOKIE, refreshToken, { ...cookieOptions(), maxAge: 30 * 24 * 60 * 60 * 1000 });
+        res.json({ user, accessToken });
+      }
     } catch (e) { next(e); }
   });
 
   router.post('/refresh', async (req, res, next) => {
     try {
-      const presented = req.cookies?.[REFRESH_COOKIE];
-      // Must be a 401: the client's single-flight refresh in lib/api.ts keys
-      // off the status, and a 500 here strands the session instead of logging
-      // the user out cleanly.
+      const isNative = req.headers['x-client'] === 'native';
+      const presented = isNative 
+        ? req.body?.refreshToken 
+        : req.cookies?.[REFRESH_COOKIE];
+      
       if (!presented) {
         throw new HttpError(401, ErrorCode.UNAUTHORIZED, 'No refresh token');
       }
 
       const { accessToken, refreshToken } = await auth.refresh(presented);
-      res.cookie(REFRESH_COOKIE, refreshToken, { ...cookieOptions(), maxAge: 30 * 24 * 60 * 60 * 1000 });
-      res.json({ accessToken });
+      
+      if (isNative) {
+        res.json({ accessToken, refreshToken });
+      } else {
+        res.cookie(REFRESH_COOKIE, refreshToken, { ...cookieOptions(), maxAge: 30 * 24 * 60 * 60 * 1000 });
+        res.json({ accessToken });
+      }
     } catch (e) {
-      res.clearCookie(REFRESH_COOKIE, cookieOptions());
+      if (req.headers['x-client'] !== 'native') {
+        res.clearCookie(REFRESH_COOKIE, cookieOptions());
+      }
       next(e);
     }
   });
 
   router.post('/logout', async (req, res, next) => {
     try {
-      await auth.logout(req.cookies?.[REFRESH_COOKIE]);
-      res.clearCookie(REFRESH_COOKIE, cookieOptions());
-      res.json({ success: true });
+      const isNative = req.headers['x-client'] === 'native';
+      const token = isNative ? req.body?.refreshToken : req.cookies?.[REFRESH_COOKIE];
+      
+      await auth.logout(token);
+      
+      if (isNative) {
+        res.json({ success: true });
+      } else {
+        res.clearCookie(REFRESH_COOKIE, cookieOptions());
+        res.json({ success: true });
+      }
     } catch (e) { next(e); }
   });
 

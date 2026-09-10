@@ -13,14 +13,14 @@ export function createDownloadsRouter(container: Container) {
   const { downloads, requireAuth } = container;
   const router = Router();
 
-  router.post('/estimate', validate({ body: EstimateDownloadSchema }), async (req, res, next) => {
+  router.post('/estimate', requireAuth, validate({ body: EstimateDownloadSchema }), async (req, res, next) => {
     try {
       const result = await downloads.estimate(req.body.videoId, req.body.format, req.body.quality);
       res.json(result);
     } catch (e) { next(e); }
   });
 
-  router.post('/playlist/estimate', validate({ body: EstimatePlaylistDownloadSchema }), async (req, res, next) => {
+  router.post('/playlist/estimate', requireAuth, validate({ body: EstimatePlaylistDownloadSchema }), async (req, res, next) => {
     try {
       const result = await downloads.estimatePlaylist(req.body.playlistId, req.body.format, req.body.quality);
       res.json(result);
