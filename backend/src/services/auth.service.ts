@@ -73,36 +73,6 @@ export class AuthService {
     return { user, ...(await this.issueTokens(user.id, user.email)) };
   }
 
-  async validateGoogleUser(profile: { email: string; googleId: string }): Promise<PublicUser> {
-    const email = profile.email.trim().toLowerCase();
-
-    let user = await this.prisma.user.findUnique({
-      where: { googleId: profile.googleId },
-    });
-
-    if (!user) {
-      const byEmail = await this.prisma.user.findUnique({ where: { email } });
-      user = byEmail
-        ? await this.prisma.user.update({
-            where: { id: byEmail.id },
-            data: { googleId: profile.googleId },
-          })
-        : await this.prisma.user.create({
-            data: {
-              email,
-              googleId: profile.googleId,
-              settings: { create: {} },
-            },
-          });
-    }
-
-    return this.toPublic(user);
-  }
-
-  async issueTokensForUser(userId: string, email: string): Promise<AuthTokens> {
-    return this.issueTokens(userId, email);
-  }
-
   async refresh(presentedToken: string): Promise<AuthTokens> {
     const { sub } = await verifyRefreshToken(presentedToken);
 

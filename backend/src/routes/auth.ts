@@ -5,7 +5,6 @@ import { Container } from '../container.js';
 import { HttpError } from '../lib/http-error.js';
 import { validate } from '../middleware/validate.js';
 import { LoginSchema, RegisterSchema } from '../schemas/auth.schema.js';
-import passport from 'passport';
 
 const REFRESH_COOKIE = 'refresh_token';
 
@@ -71,23 +70,6 @@ export function createAuthRouter(container: Container) {
   router.get('/me', requireAuth, (req, res) => {
     res.json(currentUser(req));
   });
-
-  if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
-    router.get('/google', passport.authenticate('google', { scope: ['email', 'profile'], session: false }));
-
-    router.get('/google/callback', passport.authenticate('google', { session: false, failureRedirect: `${env.FRONTEND_URL}/login?error=oauth` }), async (req, res, next) => {
-      try {
-        const user = req.user;
-        if (!user) {
-          throw new HttpError(401, ErrorCode.UNAUTHORIZED, 'Google authentication failed');
-        }
-
-        const { refreshToken } = await auth.issueTokensForUser(user.id, user.email);
-        res.cookie(REFRESH_COOKIE, refreshToken, { ...cookieOptions(), maxAge: 30 * 24 * 60 * 60 * 1000 });
-        res.redirect(`${env.FRONTEND_URL}/auth/callback`);
-      } catch (e) { next(e); }
-    });
-  }
 
   return router;
 }

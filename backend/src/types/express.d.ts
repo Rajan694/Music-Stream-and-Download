@@ -7,6 +7,9 @@ declare global {
     }
 
     interface Request {
+      /** Set by the `requireAuth` middleware; read through `currentUser`. */
+      user?: User;
+
       /**
        * Output of the `validate` middleware. `query` and `params` are getters
        * on Express 5 and cannot be reassigned, so parsed values land here.

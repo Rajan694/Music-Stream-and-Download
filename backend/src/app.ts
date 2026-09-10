@@ -2,8 +2,6 @@ import express, { type Application } from 'express';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import passport from 'passport';
-import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { Container } from './container.js';
 import { requestLogging } from './middleware/request-logging.js';
 import { throttle } from './middleware/throttle.js';
@@ -42,7 +40,6 @@ function corsOrigin(container: Container) {
 }
 
 export function createApp(container: Container): Application {
-  const { env } = container;
   const app = express();
 
   app.use(helmet());
@@ -51,31 +48,6 @@ export function createApp(container: Container): Application {
   app.use(cors({ origin: corsOrigin(container), credentials: true }));
   app.use(requestLogging);
   app.use(throttle);
-
-  if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
-    passport.use(new GoogleStrategy(
-      {
-        clientID: env.GOOGLE_CLIENT_ID,
-        clientSecret: env.GOOGLE_CLIENT_SECRET,
-        callbackURL: env.GOOGLE_CALLBACK_URL,
-        scope: ['email', 'profile'],
-      },
-      async (_accessToken, _refreshToken, profile, done) => {
-        const email = profile.emails?.[0]?.value;
-        if (!email) { done(new Error('Google account has no email address')); return; }
-        try {
-          const user = await container.auth.validateGoogleUser({
-            email,
-            googleId: profile.id,
-          });
-          done(null, user);
-        } catch (error) {
-          done(error as Error);
-        }
-      },
-    ));
-    app.use(passport.initialize());
-  }
 
   app.use('/api/v1', createApiRouter(container));
   app.use(notFound);

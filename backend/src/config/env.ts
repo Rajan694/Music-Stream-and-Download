@@ -99,11 +99,6 @@ const EnvSchema = z.object({
   JWT_REFRESH_TTL: z.string().default('30d'),
   COOKIE_DOMAIN: z.string().default('localhost'),
   COOKIE_SECURE: z.enum(['true', 'false']).optional(),
-  GOOGLE_CLIENT_ID: z.string().default(''),
-  GOOGLE_CLIENT_SECRET: z.string().default(''),
-  GOOGLE_CALLBACK_URL: z
-    .string()
-    .default('http://localhost:4000/api/v1/auth/google/callback'),
   FRONTEND_URL: z.string().default('http://localhost:3000'),
 
   MAX_PLAYLIST_ITEMS: z.coerce.number().int().positive().default(50),

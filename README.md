@@ -58,7 +58,6 @@ This starts:
 Copy `.env.example` to `.env` and fill in:
 
 - `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` — min 32 chars (`openssl rand -base64 48`)
-- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — for OAuth (optional)
 - `PIPED_API_URL` — self-hosted Piped API (default: `http://localhost:7081`)
 - `REDIS_URL` — backs both the metadata cache and the job queue. The backend
   enqueues here and the worker consumes from here, so both must resolve to the
