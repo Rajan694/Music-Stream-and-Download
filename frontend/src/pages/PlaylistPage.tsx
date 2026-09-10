@@ -136,33 +136,33 @@ export function PlaylistPage() {
       ) : (
         <div className="divide-y divide-white/5">
           {playlist.videos.map((track, index) => (
-            <div
-              key={`${track.id}-${index}`}
-              className="flex items-center gap-4 py-3 group hover:bg-white/5 px-2 rounded-lg transition-colors"
-            >
-              <span className="w-6 shrink-0 text-right text-xs font-medium text-zinc-500">
+                <div
+                  key={`${track.id}-${index}`}
+                  className="flex items-center gap-4 py-3 group hover:bg-zinc-100 dark:hover:bg-white/5 px-2 -mx-2 rounded-lg transition-colors"
+                >
+              <span className="w-6 shrink-0 text-right text-xs font-medium text-zinc-400 dark:text-zinc-500">
                 {index + 1}
               </span>
 
-              <button
-                onClick={() => playFrom(track.id)}
-                disabled={loadingTrack !== null}
-                className="flex-1 min-w-0 text-left disabled:opacity-50"
-              >
-                <p className="text-sm font-semibold text-zinc-100 truncate group-hover:text-white">
-                    {track.title}
-                </p>
-                <p className="text-xs text-zinc-400 mt-0.5">
-                  {track.uploaderName} • {formatDuration(track.duration)}
-                </p>
-              </button>
+                <button
+                  onClick={() => playFrom(track.id)}
+                  disabled={loadingTrack !== null}
+                  className="flex-1 min-w-0 text-left disabled:opacity-50"
+                >
+                  <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate group-hover:text-zinc-900 dark:group-hover:text-white">
+                      {track.title}
+                  </p>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    {track.uploaderName} • {formatDuration(track.duration)}
+                  </p>
+                </button>
 
               {loadingTrack === track.id ? (
                 <Loader2 className="animate-spin w-4 h-4 text-accent-primary" />
               ) : (
                 <Link
                   to={`/video/${track.id}`}
-                  className="text-xs font-medium text-zinc-500 hover:text-white px-2 py-1"
+                  className="text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-white px-2 py-1"
                 >
                   View
                 </Link>

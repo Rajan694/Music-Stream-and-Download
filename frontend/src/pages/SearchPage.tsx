@@ -111,8 +111,8 @@ export function SearchPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight text-white">Search</h1>
-        <p className="text-xs text-zinc-400">Find your favorite music, artists, or paste a link</p>
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">Search</h1>
+        <p className="text-xs text-zinc-500">Find your favorite music, artists, or paste a link</p>
       </div>
 
       <div
@@ -138,7 +138,7 @@ export function SearchPage() {
               }
             }}
             placeholder="Search songs, albums, artists..."
-            className="w-full bg-background-1 border border-white/10 rounded-xl pl-11 pr-4 py-3.5 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-accent-primary/50 focus:ring-2 focus:ring-accent-primary/20 transition-all font-medium"
+            className="w-full bg-white dark:bg-background-1 border border-zinc-200 dark:border-white/10 rounded-xl pl-11 pr-4 py-3.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-accent-primary/50 focus:ring-2 focus:ring-accent-primary/20 transition-all font-medium"
             role="combobox"
             aria-expanded={showSuggestions && !!suggestions?.length}
             aria-controls="search-suggestions"
@@ -148,7 +148,7 @@ export function SearchPage() {
         {showSuggestions && suggestions && suggestions.length > 0 && (
           <ul
             id="search-suggestions"
-            className="absolute top-full left-0 right-0 mt-2 bg-background-1/90 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden py-1 z-30"
+            className="absolute top-full left-0 right-0 mt-2 bg-white/90 dark:bg-background-1/90 backdrop-blur-xl border border-zinc-200 dark:border-white/10 rounded-xl shadow-2xl overflow-hidden py-1 z-30"
             role="listbox"
           >
             {suggestions.map((suggestion, index) => (
@@ -161,9 +161,9 @@ export function SearchPage() {
                   commitQ(suggestion);
                   setIsFocused(false);
                 }}
-                className="px-4 py-2.5 hover:bg-white/5 cursor-pointer text-xs font-medium text-zinc-300 hover:text-white flex items-center gap-3 transition-colors"
+                className="px-4 py-2.5 hover:bg-zinc-100 dark:hover:bg-white/5 cursor-pointer text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white flex items-center gap-3 transition-colors"
               >
-                <Search size={14} className="text-zinc-500" />
+                <Search size={14} className="text-zinc-400 dark:text-zinc-500" />
                 {suggestion}
               </li>
             ))}
@@ -189,11 +189,11 @@ export function SearchPage() {
               data.items.map((item) => (
                 <div
                   key={`${item.type}-${item.id}`}
-                  className="group flex items-center gap-4 p-2 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/5"
+                  className="group flex items-center gap-4 p-2 rounded-xl hover:bg-zinc-100/50 dark:hover:bg-white/5 transition-colors border border-transparent hover:border-zinc-200/50 dark:hover:border-white/5"
                 >
                   <button
                     onClick={() => (item.type === 'video' ? handlePlayNow(item) : navigate(`/playlist/${item.id}`))}
-                    className="relative w-14 h-14 shrink-0 bg-background-2 rounded-lg overflow-hidden flex items-center justify-center group-hover:shadow-lg transition-all"
+                    className="relative w-14 h-14 shrink-0 bg-zinc-200 dark:bg-background-2 rounded-lg overflow-hidden flex items-center justify-center group-hover:shadow-lg transition-all"
                   >
                     {item.thumbnails?.[0] && (
                       <img
@@ -208,7 +208,7 @@ export function SearchPage() {
                   </button>
 
                   <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <h3 className="text-sm font-semibold truncate text-zinc-100 group-hover:text-white">{item.title}</h3>
+                    <h3 className="text-sm font-semibold truncate text-zinc-800 dark:text-zinc-100 group-hover:text-zinc-900 dark:group-hover:text-white">{item.title}</h3>
                     <p className="text-xs text-zinc-400 mt-0.5 truncate">
                       {item.uploaderName}
                       {item.type === 'playlist' ? ` · ${item.videoCount} tracks` : ''}

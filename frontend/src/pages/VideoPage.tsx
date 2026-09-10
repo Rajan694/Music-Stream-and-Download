@@ -97,14 +97,14 @@ export function VideoPage() {
               </button>
               <button
                 onClick={() => playNextInQueue(video)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 text-zinc-300 text-sm font-medium hover:bg-white/10 transition-colors"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-300 text-sm font-medium hover:bg-zinc-200 dark:hover:bg-white/10 transition-colors"
               >
                 <Radio size={16} />
                 Play next
               </button>
               <button
                 onClick={() => addToQueue(video)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 text-zinc-300 text-sm font-medium hover:bg-white/10 transition-colors hidden sm:flex"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-300 text-sm font-medium hover:bg-zinc-200 dark:hover:bg-white/10 transition-colors hidden sm:flex"
               >
                 <ListPlus size={16} />
                 Add to queue
@@ -112,7 +112,7 @@ export function VideoPage() {
               {isAuthenticated && (
                 <button
                   onClick={() => globalThis.openDownloadDialog?.(video)}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 text-zinc-300 text-sm font-medium hover:text-accent-primary hover:bg-white/10 transition-colors ml-auto sm:ml-0"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-300 text-sm font-medium hover:text-accent-primary dark:hover:text-accent-primary hover:bg-zinc-200 dark:hover:bg-white/10 transition-colors ml-auto sm:ml-0"
                 >
                   <Download size={16} />
                   <span className="hidden sm:inline">Download</span>
@@ -131,7 +131,7 @@ export function VideoPage() {
               Description
             </div>
           </summary>
-          <div className="p-4 text-sm text-zinc-400 whitespace-pre-wrap leading-relaxed opacity-90 max-h-96 overflow-y-auto">
+          <div className="p-4 text-sm text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap leading-relaxed opacity-90 max-h-96 overflow-y-auto">
             {video.description}
           </div>
         </details>
@@ -167,7 +167,7 @@ export function VideoPage() {
                   </div>
                   
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-zinc-200 group-hover:text-white line-clamp-2">
+                    <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-200 group-hover:text-zinc-900 dark:group-hover:text-white line-clamp-2">
                       {item.title}
                     </p>
                     <p className="text-xs text-zinc-500 mt-1">

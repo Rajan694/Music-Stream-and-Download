@@ -52,13 +52,13 @@ export function PlayerPage() {
       {/* Dynamic blurred background backdrop */}
       {currentTrack.thumbnails?.[0] && (
         <div 
-          className="absolute inset-0 -z-10 blur-[120px] opacity-20 bg-center bg-cover scale-150 pointer-events-none"
+          className="absolute inset-0 -z-10 blur-[120px] opacity-20 dark:opacity-20 opacity-10 bg-center bg-cover scale-150 pointer-events-none"
           style={{ backgroundImage: `url(${currentTrack.thumbnails[0].url})` }}
         />
       )}
 
       {/* Modern High-End Artwork Display */}
-      <div className="relative w-64 h-64 md:w-80 md:h-80 mb-8 rounded-2xl overflow-hidden shadow-2xl border border-white/10 group">
+      <div className="relative w-64 h-64 md:w-80 md:h-80 mb-8 rounded-2xl overflow-hidden shadow-2xl shadow-black/20 border border-zinc-200 dark:border-white/10 group">
         {currentTrack.thumbnails?.[0] && (
           <img
             src={currentTrack.thumbnails[0].url}
@@ -69,10 +69,10 @@ export function PlayerPage() {
       </div>
 
       <div className="text-center w-full px-4 mb-6">
-        <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white line-clamp-1 mb-1">
+        <h1 className="text-xl md:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white line-clamp-1 mb-1">
           {currentTrack.title}
         </h1>
-        <p className="text-sm font-medium text-zinc-400">{currentTrack.uploaderName}</p>
+        <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{currentTrack.uploaderName}</p>
       </div>
 
       <div className="w-full px-4 space-y-6">
@@ -88,21 +88,21 @@ export function PlayerPage() {
         <div className="flex items-center justify-between px-6">
           <button
             onClick={toggleRepeat}
-            className={`p-2 transition-colors ${repeatMode !== "off" ? "text-accent-primary" : "text-zinc-500 hover:text-zinc-300"}`}
+            className={`p-2 transition-colors ${repeatMode !== "off" ? "text-accent-primary" : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"}`}
           >
             {repeatMode === "one" ? <Repeat1 size={20} /> : <Repeat size={20} />}
           </button>
 
           <button
             onClick={playPrevious}
-            className="p-2 text-zinc-400 hover:text-white transition-colors"
+            className="p-2 text-zinc-400 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
           >
             <SkipBack size={24} fill="currentColor" />
           </button>
 
           <button
             onClick={() => setPlaying(!isPlaying)}
-            className="w-14 h-14 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow-lg shadow-white/10"
+            className="w-14 h-14 bg-zinc-900 text-white dark:bg-white dark:text-black rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow-lg shadow-black/10"
           >
             {isPlaying ? (
               <Pause size={24} fill="currentColor" />
@@ -114,14 +114,14 @@ export function PlayerPage() {
           <button
             onClick={playNext}
             disabled={isLoadingNext}
-            className="p-2 text-zinc-400 hover:text-white transition-colors disabled:opacity-50"
+            className="p-2 text-zinc-400 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors disabled:opacity-50"
           >
             <SkipForward size={24} fill="currentColor" />
           </button>
 
           <button
             onClick={() => setIsQueueOpen(!isQueueOpen)}
-            className={`p-2 transition-colors ${isQueueOpen ? "text-accent-primary" : "text-zinc-500 hover:text-zinc-300"}`}
+            className={`p-2 transition-colors ${isQueueOpen ? "text-accent-primary" : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"}`}
           >
             <ListMusic size={20} />
           </button>
@@ -129,21 +129,21 @@ export function PlayerPage() {
 
         {/* Drawer for Up Next */}
         {isQueueOpen && (
-          <div className="bg-background-1 border border-white/5 rounded-xl overflow-hidden mt-6">
-            <div className="p-3 border-b border-white/5 flex justify-between items-center text-xs font-semibold text-zinc-400">
+          <div className="bg-white dark:bg-background-1 border border-zinc-200 dark:border-white/5 rounded-xl overflow-hidden mt-6 shadow-xl">
+            <div className="p-3 border-b border-zinc-100 dark:border-white/5 flex justify-between items-center text-xs font-semibold text-zinc-500">
               <span>Up Next ({queue.length})</span>
-              <button onClick={clearQueue} className="text-red-400 hover:underline">Clear</button>
+              <button onClick={clearQueue} className="text-red-500 hover:underline">Clear</button>
             </div>
-            <div className="max-h-56 overflow-y-auto divide-y divide-white/5">
+            <div className="max-h-56 overflow-y-auto divide-y divide-zinc-100 dark:divide-white/5">
               {queue.map((t, idx) => (
                 <div
                   key={`${t.id}-${idx}`}
                   className={`flex items-center justify-between p-3 text-xs ${
-                    idx === queueIndex ? "text-accent-primary bg-white/5 font-semibold" : "text-zinc-300"
+                    idx === queueIndex ? "text-accent-primary bg-zinc-100 dark:bg-white/5 font-semibold" : "text-zinc-600 dark:text-zinc-300"
                   }`}
                 >
                   <span className="truncate flex-1 pr-2">{idx + 1}. {t.title}</span>
-                  <button onClick={() => removeFromQueue(idx)} className="text-zinc-500 hover:text-white">
+                  <button onClick={() => removeFromQueue(idx)} className="text-zinc-400 hover:text-red-500">
                     <X size={14} />
                   </button>
                 </div>
