@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
-import { MdError } from "react-icons/md";
+import { MdError, MdSchedule, MdSync, MdSystemUpdateAlt } from "react-icons/md";
 import { apiClient } from "../lib/api";
 import { saveCompletedDownload } from "../lib/downloads-save";
 import { useAuthStore } from "../stores/auth.store";
@@ -98,14 +98,20 @@ export function DownloadsPage() {
                     {job.title}
                   </h3>
                   <span
-                    className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${
+                    className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full whitespace-nowrap shrink-0 ${
                       isCompleted
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                        ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
                         : isFailed
-                          ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                          : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                          ? "bg-red-500/10 text-red-500 border border-red-500/20"
+                          : job.state === "downloading"
+                            ? "bg-blue-500/10 text-blue-500 border border-blue-500/20"
+                            : "bg-amber-500/10 text-amber-500 border border-amber-500/20"
                     }`}
                   >
+                    {isCompleted && <MdSystemUpdateAlt className="w-3.5 h-3.5" />}
+                    {isActive && job.state === "downloading" && <MdSync className="w-3.5 h-3.5 animate-spin" />}
+                    {isActive && job.state !== "downloading" && <MdSchedule className="w-3.5 h-3.5" />}
+                    {isFailed && <MdError className="w-3.5 h-3.5" />}
                     {job.state}
                   </span>
                 </div>

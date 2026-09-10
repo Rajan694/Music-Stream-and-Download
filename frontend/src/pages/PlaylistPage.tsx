@@ -5,12 +5,9 @@ import { apiClient } from "../lib/api";
 import { formatDuration, pickThumbnail } from "../lib/format";
 import { usePlayerStore } from "../stores/player.store";
 import { useAuthStore } from "../stores/auth.store";
-import {
-  EmptyState,
-  ErrorState,
-  Spinner,
-} from "../components/ui/States";
+import { EmptyState, ErrorState, Spinner, SkeletonRow } from "../components/ui/States";
 import { PlaylistDownloadButton } from "../components/player/PlaylistDownloadButton";
+import { Play, Pin, PinOff, Loader2 } from "lucide-react";
 
 export function PlaylistPage() {
   const { id } = useParams<{ id: string }>();
@@ -89,21 +86,21 @@ export function PlaylistPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row gap-6">
+      <div className="flex flex-col md:flex-row gap-8 items-start">
         {cover && (
           <img
             src={cover}
             alt=""
-            className="w-full sm:w-56 aspect-square object-cover rounded-xl bg-zinc-200 dark:bg-zinc-800"
+            className="w-full md:w-64 aspect-square object-cover rounded-2xl shadow-xl shadow-black/50 border border-white/5"
           />
         )}
 
-        <div className="flex-1 min-w-0 space-y-3">
-          <h1 className="text-2xl font-bold tracking-tight">
+        <div className="flex-1 min-w-0 space-y-4">
+          <h1 className="text-3xl font-bold tracking-tighter text-white">
             {playlist.title}
           </h1>
-          <p className="text-zinc-500">
-            {playlist.uploaderName} · {playlist.videoCount} tracks
+          <p className="text-sm font-medium text-zinc-400">
+            {playlist.uploaderName} • {playlist.videoCount} tracks
           </p>
 
           <div className="flex flex-wrap gap-2 pt-2">
@@ -112,44 +109,38 @@ export function PlaylistPage() {
                 playlist.videos[0] && playFrom(playlist.videos[0].id)
               }
               disabled={playlist.videos.length === 0 || loadingTrack !== null}
-              className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-accent-primary text-white text-sm font-medium hover:opacity-90 disabled:opacity-50"
             >
+              <Play size={16} fill="currentColor" />
               Play
             </button>
             {isAuthenticated && (
               <button
                 onClick={() => togglePin.mutate()}
                 disabled={togglePin.isPending}
-                className="px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50"
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white/5 text-sm font-medium hover:bg-white/10 disabled:opacity-50"
               >
-                {isPinned ? "Unpin" : "Pin to home"}
+                {isPinned ? <PinOff size={16} /> : <Pin size={16} />}
+                {isPinned ? "Unpin" : "Pin"}
               </button>
             )}
             {isAuthenticated && playlist.videos.length > 0 && (
               <PlaylistDownloadButton playlistId={id!} />
             )}
           </div>
-
-          {togglePin.isError && (
-            <p className="text-sm text-red-500">
-              {togglePin.error instanceof Error
-                ? togglePin.error.message
-                : "Could not update pin"}
-            </p>
-          )}
         </div>
       </div>
 
       {playlist.videos.length === 0 ? (
         <EmptyState title="This playlist is empty" />
       ) : (
-        <ol className="divide-y divide-zinc-200 dark:divide-zinc-800">
+        <div className="divide-y divide-white/5">
           {playlist.videos.map((track, index) => (
-            <li
+            <div
               key={`${track.id}-${index}`}
-              className="flex items-center gap-3 py-3"
+              className="flex items-center gap-4 py-3 group hover:bg-white/5 px-2 rounded-lg transition-colors"
             >
-              <span className="w-8 shrink-0 text-right text-sm tabular-nums text-zinc-400">
+              <span className="w-6 shrink-0 text-right text-xs font-medium text-zinc-500">
                 {index + 1}
               </span>
 
@@ -158,23 +149,27 @@ export function PlaylistPage() {
                 disabled={loadingTrack !== null}
                 className="flex-1 min-w-0 text-left disabled:opacity-50"
               >
-                <p className="text-sm font-medium truncate">{track.title}</p>
-                <p className="text-xs text-zinc-500 mt-0.5">
-                  {track.uploaderName} · {formatDuration(track.duration)}
+                <p className="text-sm font-semibold text-zinc-100 truncate group-hover:text-white">
+                    {track.title}
+                </p>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  {track.uploaderName} • {formatDuration(track.duration)}
                 </p>
               </button>
 
-              {loadingTrack === track.id && <Spinner />}
-
-              <Link
-                to={`/video/${track.id}`}
-                className="shrink-0 text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 px-2 py-1"
-              >
-                Details
-              </Link>
-            </li>
+              {loadingTrack === track.id ? (
+                <Loader2 className="animate-spin w-4 h-4 text-accent-primary" />
+              ) : (
+                <Link
+                  to={`/video/${track.id}`}
+                  className="text-xs font-medium text-zinc-500 hover:text-white px-2 py-1"
+                >
+                  View
+                </Link>
+              )}
+            </div>
           ))}
-        </ol>
+        </div>
       )}
     </div>
   );

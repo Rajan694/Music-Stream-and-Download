@@ -1,4 +1,5 @@
 "use client";
+import { motion } from "framer-motion";
 
 export function Choice<T extends string>({
   label,
@@ -17,14 +18,14 @@ export function Choice<T extends string>({
 }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-2">
         {label}
       </p>
       {description && (
-        <p className="text-xs text-zinc-400 mt-0.5">{description}</p>
+        <p className="text-xs text-zinc-400 mb-3">{description}</p>
       )}
       <div
-        className="mt-2 grid grid-cols-3 gap-2"
+        className="relative grid grid-cols-3 gap-1 bg-background-2 p-1 rounded-xl"
         role="radiogroup"
         aria-label={label}
       >
@@ -35,12 +36,17 @@ export function Choice<T extends string>({
             role="radio"
             aria-checked={value === option}
             onClick={() => onSelect(option)}
-            className={`py-2 rounded-lg border text-sm font-medium transition-colors ${
-              value === option
-                ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
-                : "border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:border-zinc-300"
+            className={`relative z-10 py-2 rounded-lg text-sm font-medium transition-colors ${
+              value === option ? "text-white" : "text-zinc-500 hover:text-zinc-300"
             }`}
           >
+            {value === option && (
+              <motion.div
+                layoutId={`choice-bg-${label}`}
+                className="absolute inset-0 bg-white/10 rounded-lg -z-10 border border-white/5 shadow-sm"
+                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+              />
+            )}
             {render(option)}
           </button>
         ))}

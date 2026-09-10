@@ -1,8 +1,8 @@
 import { Link } from "react-router";
-import { MdArrowDownward, MdArrowUpward, MdClose } from "react-icons/md";
 import { usePlayerStore } from "../stores/player.store";
 import { formatDuration, pickThumbnail } from "../lib/format";
 import { EmptyState } from "../components/ui/States";
+import { ArrowUp, ArrowDown, X, Play, Trash2 } from "lucide-react";
 
 export function QueuePage() {
   const queue = usePlayerStore((s) => s.queue);
@@ -16,7 +16,7 @@ export function QueuePage() {
   if (queue.length === 0) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold tracking-tight">Queue</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-white">Queue</h1>
         <EmptyState
           title="Nothing queued"
           message="Play something, or add tracks from a video or playlist page."
@@ -31,35 +31,38 @@ export function QueuePage() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold tracking-tight">Queue</h1>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-white">Queue</h1>
+          <p className="text-xs text-zinc-400 mt-1">{queue.length} tracks total</p>
+        </div>
         <button
           onClick={clearQueue}
-          className="px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/10 text-xs font-medium text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
         >
-          Clear
+          <Trash2 size={14} />
+          Clear Queue
         </button>
       </div>
 
       {currentTrack && (
         <section className="space-y-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-accent-primary">
             Now playing
           </h2>
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/15 border border-blue-100 dark:border-blue-900/25">
+          <div className="flex items-center gap-4 p-3 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-sm">
             {pickThumbnail(currentTrack.thumbnails) && (
               <img
                 src={pickThumbnail(currentTrack.thumbnails)}
                 alt=""
-                className="w-14 h-14 object-cover rounded-md bg-zinc-200 dark:bg-zinc-800 shrink-0"
+                className="w-12 h-12 object-cover rounded-xl bg-background-2 shrink-0 shadow-md"
               />
             )}
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium truncate">
+              <p className="text-sm font-semibold text-white truncate">
                 {currentTrack.title}
               </p>
-              <p className="text-xs text-zinc-500 mt-0.5">
-                {currentTrack.uploaderName} ·{" "}
-                {formatDuration(currentTrack.duration)}
+              <p className="text-xs text-zinc-400 mt-0.5">
+                {currentTrack.uploaderName} • {formatDuration(currentTrack.duration)}
               </p>
             </div>
           </div>
@@ -67,30 +70,37 @@ export function QueuePage() {
       )}
 
       <section className="space-y-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-          Next ({upNext.length})
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          Up next ({upNext.length})
         </h2>
 
         {upNext.length === 0 ? (
-          <p className="text-sm text-zinc-500 py-4">End of queue.</p>
+          <p className="text-xs text-zinc-500 py-4">End of queue.</p>
         ) : (
-          <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+          <div className="divide-y divide-white/5">
             {upNext.map((track, offset) => {
               const index = queueIndex + 1 + offset;
               return (
-                <li
+                <div
                   key={`${track.id}-${index}`}
-                  className="flex items-center gap-3 py-3"
+                  className="flex items-center gap-3 py-2.5 group hover:bg-white/5 px-2 -mx-2 rounded-xl transition-colors"
                 >
                   <button
                     onClick={() => playAt(index)}
-                    className="flex-1 min-w-0 text-left"
+                    className="flex-1 min-w-0 text-left flex items-center gap-3"
                     title="Play now"
                   >
-                    <p className="text-sm font-medium truncate">{track.title}</p>
-                    <p className="text-xs text-zinc-500 mt-0.5">
-                      {track.uploaderName} · {formatDuration(track.duration)}
-                    </p>
+                    <div className="w-6 text-center text-xs font-medium text-zinc-500">
+                      {offset + 1}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-zinc-200 group-hover:text-white truncate">
+                        {track.title}
+                      </p>
+                      <p className="text-xs text-zinc-500 mt-0.5 truncate">
+                        {track.uploaderName} • {formatDuration(track.duration)}
+                      </p>
+                    </div>
                   </button>
 
                   <div className="flex items-center gap-1 shrink-0">
@@ -98,36 +108,30 @@ export function QueuePage() {
                       onClick={() => moveInQueue(index, index - 1)}
                       disabled={offset === 0}
                       aria-label="Move up"
-                      className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30"
+                      className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 disabled:opacity-20 transition-colors"
                     >
-                      <MdArrowUpward className="w-4 h-4" />
+                      <ArrowUp size={14} />
                     </button>
                     <button
                       onClick={() => moveInQueue(index, index + 1)}
                       disabled={offset === upNext.length - 1}
                       aria-label="Move down"
-                      className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-30"
+                      className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 disabled:opacity-20 transition-colors"
                     >
-                      <MdArrowDownward className="w-4 h-4" />
+                      <ArrowDown size={14} />
                     </button>
-                    <Link
-                      to={`/video/${track.id}`}
-                      className="p-2 rounded-md text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                    >
-                      Details
-                    </Link>
                     <button
                       onClick={() => removeFromQueue(index)}
                       aria-label="Remove from queue"
-                      className="p-2 rounded-md text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                      className="p-1.5 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-white/5 transition-colors"
                     >
-                      <MdClose className="w-4 h-4" />
+                      <X size={14} />
                     </button>
                   </div>
-                </li>
+                </div>
               );
             })}
-          </ul>
+          </div>
         )}
       </section>
     </div>

@@ -25,6 +25,7 @@
     "lint": "eslint .",
     "infra:up": "docker compose up -d postgres redis piped-db piped-bg-helper piped-backend piped-proxy",
     "infra:down": "docker compose down",
+    "piped:stop": "docker compose stop piped-backend piped-proxy piped-bg-helper piped-db",
     "piped:logs": "docker compose logs -f piped-backend",
     "piped:restart": "docker compose restart piped-backend",
     "docker:build": "docker compose --profile prod build",

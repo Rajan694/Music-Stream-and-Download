@@ -53,6 +53,16 @@ This starts:
 
 > **Note:** First boot of Piped runs Hibernate database migrations and may take 1-2 minutes (~1 GB initial Docker image downloads).
 
+Stopping `./scripts/dev.sh` (Ctrl+C, or closing the terminal) stops the Piped
+stack with it. Postgres and Redis stay up — they are cheap and Redis holds the
+BullMQ queue. If you started the dev servers with a bare `npm run dev`, there is
+no teardown hook, so stop Piped yourself:
+
+```bash
+npm run piped:stop     # stop just the Piped containers
+npm run infra:down     # stop and remove every dev container (volumes survive)
+```
+
 ## Environment Variables
 
 Copy `.env.example` to `.env` and fill in:
@@ -65,15 +75,21 @@ Copy `.env.example` to `.env` and fill in:
 
 ## Docker (Production)
 
-```bash
-# Build all images
-./scripts/docker.sh build
+Runs the whole project in containers — frontend, backend and worker included —
+instead of only the infrastructure:
 
-# Start production stack
-./scripts/docker.sh up
+```bash
+npm run docker:build   # build frontend/backend/worker images
+npm run docker:up      # start the full stack detached
+npm run db:migrate     # apply migrations (nothing in the stack does this)
 ```
 
+`./scripts/docker.sh {up|down|logs|rebuild}` wraps the same commands, with
+`rebuild` doing a `--no-cache` build followed by `up`.
+
 Frontend served by nginx on port 3000, API on 4000, worker with resource limits.
+`prod` is a Compose profile: without `--profile prod` (what `npm run infra:up`
+does) only Postgres, Redis and the Piped stack come up, which is the dev setup.
 
 ## Development Commands
 

@@ -1,13 +1,19 @@
 @import "tailwindcss";
 
 @theme {
-  --color-accent: oklch(0.72 0.19 25);
+  --color-accent-primary: #8b5cf6;
+  --color-accent-secondary: #06b6d4;
+  --color-background-0: #070709;
+  --color-background-1: #0f0f14;
+  --color-background-2: #181820;
+  
+  --shadow-accent-glow: 0 0 20px rgba(139, 92, 246, 0.2);
 }
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {
   body {
-    @apply antialiased;
+    @apply antialiased bg-background-0 text-zinc-100;
   }
 }

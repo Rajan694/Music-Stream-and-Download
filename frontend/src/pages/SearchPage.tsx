@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
-import { ImSpinner8 } from 'react-icons/im';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { SearchVideoItem } from '@music/shared';
 import { useUIStore } from '../stores/ui.store';
@@ -8,6 +7,8 @@ import { apiClient } from '../lib/api';
 import { formatDuration } from '../lib/format';
 import { useDebounced } from '../lib/useDebounced';
 import { usePlayerStore } from '../stores/player.store';
+import { Search, Play, MoreVertical, ListPlus, Radio } from 'lucide-react';
+import { Spinner, ErrorState } from '../components/ui/States';
 
 export function SearchPage() {
   const [params, setParams] = useSearchParams();
@@ -23,15 +24,10 @@ export function SearchPage() {
   const playNextInQueue = usePlayerStore((s) => s.playNextInQueue);
   const addToQueue = usePlayerStore((s) => s.addToQueue);
 
-  // The input is local state so keystrokes don't hit the URL — and therefore the
-  // search query — until they settle. `pushedRef` holds the last value this page
-  // wrote to the URL, so an external change (back/forward, restore below) still
-  // syncs back into the box without clobbering what the user is mid-way typing.
   const [input, setInput] = useState(q);
   const pushedRef = useRef(q);
   const debouncedInput = useDebounced(input, 400);
 
-  // Restore last query when navigating to bare /search
   useEffect(() => {
     if (!q && lastSearchQuery) {
       setParams({ q: lastSearchQuery }, { replace: true });
@@ -85,7 +81,6 @@ export function SearchPage() {
     staleTime: 5 * 60_000,
   });
 
-  // Bypasses the debounce for deliberate commits: suggestion clicks and Enter.
   const commitQ = (value: string) => {
     setInput(value);
     const trimmed = value.trim();
@@ -115,7 +110,10 @@ export function SearchPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Search</h1>
+      <div className="space-y-1">
+        <h1 className="text-2xl font-bold tracking-tight text-white">Search</h1>
+        <p className="text-xs text-zinc-400">Find your favorite music, artists, or paste a link</p>
+      </div>
 
       <div
         ref={containerRef}
@@ -126,28 +124,31 @@ export function SearchPage() {
           }
         }}
       >
-        <input
-          type="search"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onFocus={() => setIsFocused(true)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              commitQ(input);
-              setIsFocused(false);
-            }
-          }}
-          placeholder="Paste URL or search keywords..."
-          className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-4 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium"
-          role="combobox"
-          aria-expanded={showSuggestions && !!suggestions?.length}
-          aria-controls="search-suggestions"
-        />
+        <div className="relative flex items-center">
+          <Search className="absolute left-4 text-zinc-400" size={18} />
+          <input
+            type="search"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onFocus={() => setIsFocused(true)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                commitQ(input);
+                setIsFocused(false);
+              }
+            }}
+            placeholder="Search songs, albums, artists..."
+            className="w-full bg-background-1 border border-white/10 rounded-xl pl-11 pr-4 py-3.5 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-accent-primary/50 focus:ring-2 focus:ring-accent-primary/20 transition-all font-medium"
+            role="combobox"
+            aria-expanded={showSuggestions && !!suggestions?.length}
+            aria-controls="search-suggestions"
+          />
+        </div>
 
         {showSuggestions && suggestions && suggestions.length > 0 && (
           <ul
             id="search-suggestions"
-            className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden py-2"
+            className="absolute top-full left-0 right-0 mt-2 bg-background-1/90 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden py-1 z-30"
             role="listbox"
           >
             {suggestions.map((suggestion, index) => (
@@ -160,8 +161,9 @@ export function SearchPage() {
                   commitQ(suggestion);
                   setIsFocused(false);
                 }}
-                className="px-4 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer text-sm font-medium"
+                className="px-4 py-2.5 hover:bg-white/5 cursor-pointer text-xs font-medium text-zinc-300 hover:text-white flex items-center gap-3 transition-colors"
               >
+                <Search size={14} className="text-zinc-500" />
                 {suggestion}
               </li>
             ))}
@@ -170,32 +172,28 @@ export function SearchPage() {
       </div>
 
       <div className="mt-8">
-        {isLoading && (
-          <div className="py-12 flex justify-center text-zinc-500">
-            <ImSpinner8 className="animate-spin h-8 w-8 text-blue-500" />
-          </div>
-        )}
+        {isLoading && <Spinner label="Searching..." />}
 
         {isError && (
-          <div className="py-8 text-center text-red-500 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/20">
-            <p className="font-semibold">Search failed</p>
-            <p className="text-sm mt-1 opacity-80">{error instanceof Error ? error.message : 'Unknown error'}</p>
-          </div>
+          <ErrorState
+            title="Search failed"
+            message={error instanceof Error ? error.message : 'Unknown error'}
+          />
         )}
 
         {!isLoading && !isError && data && 'items' in data && (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {data.items.length === 0 ? (
-              <div className="py-12 text-center text-zinc-500">No results found</div>
+              <div className="py-12 text-center text-xs text-zinc-500">No results found</div>
             ) : (
               data.items.map((item) => (
                 <div
                   key={`${item.type}-${item.id}`}
-                  className="group flex items-center gap-4 p-3 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800"
+                  className="group flex items-center gap-4 p-2 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/5"
                 >
                   <button
                     onClick={() => (item.type === 'video' ? handlePlayNow(item) : navigate(`/playlist/${item.id}`))}
-                    className="relative w-32 shrink-0 aspect-video bg-zinc-200 dark:bg-zinc-800 rounded-lg overflow-hidden"
+                    className="relative w-14 h-14 shrink-0 bg-background-2 rounded-lg overflow-hidden flex items-center justify-center group-hover:shadow-lg transition-all"
                   >
                     {item.thumbnails?.[0] && (
                       <img
@@ -204,43 +202,46 @@ export function SearchPage() {
                         className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
                       />
                     )}
-                    {item.type === 'video' && item.duration > 0 && (
-                      <span className="absolute bottom-1 right-1 bg-black/80 backdrop-blur text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                        {formatDuration(item.duration)}
-                      </span>
-                    )}
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Play size={20} className="text-white fill-white" />
+                    </div>
                   </button>
 
                   <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <h3 className="text-sm font-semibold line-clamp-2 leading-tight">{item.title}</h3>
-                    <p className="text-xs text-zinc-500 mt-1">
+                    <h3 className="text-sm font-semibold truncate text-zinc-100 group-hover:text-white">{item.title}</h3>
+                    <p className="text-xs text-zinc-400 mt-0.5 truncate">
                       {item.uploaderName}
                       {item.type === 'playlist' ? ` · ${item.videoCount} tracks` : ''}
+                      {item.type === 'video' && item.duration > 0 ? ` · ${formatDuration(item.duration)}` : ''}
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {/* Actions for Desktop and Mobile */}
+                  <div className="flex items-center gap-1 shrink-0">
                     {item.type === 'video' && (
                       <>
                         <button
                           onClick={() => playNextInQueue(item)}
-                          className="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700"
+                          className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors hidden sm:flex"
+                          title="Play Next"
                         >
-                          Play next
+                          <Radio size={16} />
                         </button>
                         <button
                           onClick={() => addToQueue(item)}
-                          className="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700"
+                          className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+                          title="Add to Queue"
                         >
-                          Queue
+                          <ListPlus size={16} />
                         </button>
                       </>
                     )}
                     <Link
                       to={item.type === 'video' ? `/video/${item.id}` : `/playlist/${item.id}`}
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700"
+                      className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+                      title="Details"
                     >
-                      Details
+                      <MoreVertical size={16} />
                     </Link>
                   </div>
                 </div>

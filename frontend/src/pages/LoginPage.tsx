@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { useAuthStore } from "../stores/auth.store";
+import { Loader2 } from "lucide-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api/v1";
 
@@ -40,27 +41,27 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-md space-y-8">
+    <div className="min-h-[75vh] flex items-center justify-center px-4">
+      <div className="w-full max-w-sm space-y-8 bg-background-1 p-8 rounded-2xl border border-white/5 shadow-2xl shadow-black/50 backdrop-blur-xl">
         <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight">Sign in</h1>
-          <p className="mt-2 text-zinc-500">
-            Or{" "}
-            <Link to="/register" className="underline">
-              create an account
+          <h1 className="text-2xl font-bold tracking-tight text-white">Welcome back</h1>
+          <p className="mt-2 text-xs text-zinc-400">
+            Don't have an account?{" "}
+            <Link to="/register" className="text-accent-primary hover:underline font-medium">
+              Sign up
             </Link>
           </p>
         </div>
 
-        <form onSubmit={onSubmit} className="space-y-6">
+        <form onSubmit={onSubmit} className="space-y-4">
           {error && (
-            <div className="text-red-500 bg-red-50 dark:bg-red-900/10 rounded-lg p-4 text-sm">
+            <div className="text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-xs">
               {error}
             </div>
           )}
 
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <div className="space-y-1">
+            <label htmlFor="email" className="block text-xs font-semibold uppercase tracking-wider text-zinc-400">
               Email
             </label>
             <input
@@ -71,12 +72,13 @@ export function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-zinc-300 dark:border-zinc-700 px-3 py-2 text-zinc-900 dark:text-zinc-100 bg-white dark:bg-zinc-900 focus:border-blue-500 focus:ring-blue-500"
+              placeholder="name@example.com"
+              className="block w-full rounded-xl border border-white/10 px-3.5 py-2.5 text-sm text-zinc-100 bg-background-2 focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20 outline-none transition-all placeholder:text-zinc-600"
             />
           </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <div className="space-y-1">
+            <label htmlFor="password" className="block text-xs font-semibold uppercase tracking-wider text-zinc-400">
               Password
             </label>
             <input
@@ -87,15 +89,17 @@ export function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-zinc-300 dark:border-zinc-700 px-3 py-2 text-zinc-900 dark:text-zinc-100 bg-white dark:bg-zinc-900 focus:border-blue-500 focus:ring-blue-500"
+              placeholder="••••••••"
+              className="block w-full rounded-xl border border-white/10 px-3.5 py-2.5 text-sm text-zinc-100 bg-background-2 focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20 outline-none transition-all placeholder:text-zinc-600"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50"
+            className="w-full py-3 rounded-xl bg-accent-primary text-white font-medium hover:opacity-90 disabled:opacity-50 text-sm transition-opacity flex items-center justify-center gap-2 shadow-lg shadow-accent-primary/20 mt-2"
           >
+            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             {loading ? "Signing in…" : "Sign in"}
           </button>
         </form>
